@@ -17,6 +17,9 @@ export default function DashboardPage() {
     const [userData, setUserData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
+    // --- SMART NAVIGATOR STATE ---
+    // (Moved to new page logic, removed from here)
+
     const router = useRouter();
 
     useEffect(() => {
@@ -37,7 +40,23 @@ export default function DashboardPage() {
         return () => unsubscribe();
     }, [user, router]);
 
-    // Loading Skeleton
+
+    // Generic Logic & Stats (Refactored to be safe even if loading)
+    const currentXP = userData?.xp || 0;
+    const currentLevel = Math.floor(currentXP / 100) + 1;
+    const solvedCount = userData?.solvedQuestionIds?.length || 0;
+
+    // Helper to count solved questions per topic
+    const getSolvedForTopic = (topicId: string) => {
+        if (!userData?.solvedQuestionIds) return 0;
+        const topicQuestions = getQuestionsByTopicId(topicId);
+        if (!topicQuestions.length) return 0;
+        const topicQuestionIds = new Set(topicQuestions.map((q: Question) => q.id));
+        const solvedInTopic = userData.solvedQuestionIds.filter((id: string) => topicQuestionIds.has(id));
+        return solvedInTopic.length;
+    };
+
+    // Loading Skeleton (MUST be after all hooks)
     if (loading) {
         return (
             <div className="space-y-8 animate-pulse">
@@ -59,38 +78,32 @@ export default function DashboardPage() {
         )
     }
 
-    // Calculate generic rank based on XP (Mock logic)
-    const currentXP = userData?.xp || 0;
-    const currentLevel = Math.floor(currentXP / 100) + 1;
-    const solvedCount = userData?.solvedQuestionIds?.length || 0;
-
-    // Helper to count solved questions per topic
-    const getSolvedForTopic = (topicId: string) => {
-        if (!userData?.solvedQuestionIds) return 0;
-
-        // Lazy load or import questions map
-        // Since we are client side, we can just filter ALL_QUESTIONS
-        // Note: For production with 1000s of qs, this should be pre-aggregated, 
-        // but for 200 items, doing it on the fly is instant.
-        const topicQuestions = getQuestionsByTopicId(topicId);
-        if (!topicQuestions.length) return 0;
-
-        const topicQuestionIds = new Set(topicQuestions.map((q: Question) => q.id));
-        const solvedInTopic = userData.solvedQuestionIds.filter((id: string) => topicQuestionIds.has(id));
-
-        return solvedInTopic.length;
-    };
-
     return (
-        <div className="space-y-10">
-            {/* Welcome Header */}
-            <div>
-                <h1 className="text-3xl font-bold font-outfit text-white">
-                    Dashboard
-                </h1>
-                <p className="text-slate-400 mt-1">
-                    Track your progress and master new algorithms.
-                </p>
+        <div className="space-y-10 relative">
+            {/* Welcome Header & Action */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div>
+                    <h1 className="text-3xl font-bold font-outfit text-white">
+                        Dashboard
+                    </h1>
+                    <p className="text-slate-400 mt-1">
+                        Track your progress and master new algorithms.
+                    </p>
+                </div>
+
+                {/* SMART START BUTTON - REDIRECT TO HQ */}
+                <button
+                    onClick={() => router.push("/navigator")}
+                    className={`
+                        group relative overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-indigo-500/25
+                    `}
+                >
+                    <div className="absolute inset-0 bg-white/20 group-hover:translate-x-full transition-transform duration-500 skew-x-12 -translate-x-full" />
+                    <div className="flex items-center gap-2 font-semibold text-white">
+                        <Zap className="fill-white" size={20} />
+                        <span>Open Navigator HQ</span>
+                    </div>
+                </button>
             </div>
 
             {/* Stats Row */}

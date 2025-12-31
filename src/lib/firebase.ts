@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore, doc, updateDoc, arrayUnion, increment } from "firebase/firestore";
+import { getFirestore, doc, updateDoc, arrayUnion, increment, getDoc } from "firebase/firestore";
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -20,6 +20,20 @@ export const db = getFirestore(app);
 // Helper to update user progress
 export const updateUserProgress = async (uid: string, questionId: string, xpResult: number) => {
     const userRef = doc(db, "users", uid);
+
+    // Check if already solved to prevent XP farming
+    const snap = await getDoc(userRef);
+    if (snap.exists()) {
+        const data = snap.data();
+        const solvedIds = data.solvedQuestionIds || [];
+
+        if (solvedIds.includes(questionId)) {
+            // Already solved: Do not increment XP, just ensure ID is there (redundant but safe)
+            return;
+        }
+    }
+
+    // First time solving: Award XP
     await updateDoc(userRef, {
         solvedQuestionIds: arrayUnion(questionId),
         xp: increment(xpResult)

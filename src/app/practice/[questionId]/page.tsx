@@ -2,24 +2,29 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Question } from "@/types/question";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import ProblemDescription from "@/components/workspace/ProblemDescription";
 import CodeEditor from "@/components/workspace/CodeEditor";
 import EditorFooter from "@/components/workspace/EditorFooter";
+import { useRef } from "react";
 import AIPanel from "@/components/workspace/AIPanel";
 import AiTutorPanel from "@/components/workspace/AiTutorPanel";
+import VictoryOverlay from "@/components/game/VictoryOverlay";
+import { useAuth } from "@/context/AuthContext";
 import { Sparkles } from "lucide-react";
 
 export default function PracticePage() {
+    const { user } = useAuth();
     const { questionId } = useParams();
     const router = useRouter();
 
     const [question, setQuestion] = useState<Question | null>(null);
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
+    const [currentXP, setCurrentXP] = useState(0); // Real XP
 
     // Editor State
     const [language, setLanguage] = useState<"javascript" | "python" | "java">("javascript");
@@ -27,12 +32,28 @@ export default function PracticePage() {
 
     // UI State
     const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
+    const [showVictory, setShowVictory] = useState(false); // Victory State
 
     // AI State
     const [history, setHistory] = useState<any[]>([]);
     const [aiLoading, setAiLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<"problem" | "ai">("problem");
     const [hasUnreadAi, setHasUnreadAi] = useState(false); // Red Dot State
+
+    // Fetch User XP (Real-time)
+    useEffect(() => {
+        if (!user) return;
+
+        const userRef = doc(db, "users", user.uid);
+        const unsubscribe = onSnapshot(userRef, (doc) => {
+            if (doc.exists()) {
+                const data = doc.data();
+                setCurrentXP(data.xp || 0);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [user]);
 
     // Fetch Question
     useEffect(() => {
@@ -230,6 +251,7 @@ export default function PracticePage() {
                                 onAiToggle={() => setActiveTab(prev => prev === 'ai' ? 'problem' : 'ai')}
                                 isAiOpen={activeTab === 'ai'}
                                 onRunComplete={handleRunComplete}
+                                onSuccess={() => setShowVictory(true)}
                                 onHint={() => {
                                     setActiveTab("ai");
                                     handleSendMessage("Can you give me a small hint about the next step? Don't give me the answer.");
@@ -240,6 +262,15 @@ export default function PracticePage() {
 
                 </ResizablePanelGroup>
             </div>
+
+            <VictoryOverlay
+                show={showVictory}
+                questionTitle={question?.title || "Unknown Problem"}
+                xpEarned={20}
+                currentXP={currentXP} // Real User XP
+                userId={user?.uid || ""}
+                onClose={() => setShowVictory(false)}
+            />
         </div>
     );
 }

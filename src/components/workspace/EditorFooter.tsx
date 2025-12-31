@@ -17,9 +17,10 @@ interface EditorFooterProps {
     isAiOpen: boolean;
     onHint: () => void;
     onRunComplete?: (result: { stdout: string; stderr: string; isSuccess: boolean }) => void;
+    onSuccess?: () => void;
 }
 
-export default function EditorFooter({ code, language, testCases, onSubmit, onAiToggle, isAiOpen, onRunComplete, onHint }: EditorFooterProps) {
+export default function EditorFooter({ code, language, testCases, onSubmit, onAiToggle, isAiOpen, onRunComplete, onHint, onSuccess }: EditorFooterProps) {
     const { user } = useAuth();
     const params = useParams();
     const currentQuestionId = params?.questionId as string;
@@ -165,12 +166,8 @@ export default function EditorFooter({ code, language, testCases, onSubmit, onAi
                 stderr: prev?.stderr || ""
             }));
 
-            // Victory Effect
-            confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 }
-            });
+            // Victory Effect handled by parent overlay
+            if (onSuccess) onSuccess();
 
             // Update Progress in Firebase
             if (user?.uid && currentQuestionId) {
