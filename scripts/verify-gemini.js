@@ -4,16 +4,16 @@ const path = require('path');
 
 // 1. Get Key from .env.local
 const envPath = path.join(__dirname, '../.env.local');
-let apiKey = '';
+let rawKeys = '';
 
 try {
     const envContent = fs.readFileSync(envPath, 'utf8');
     const match = envContent.match(/GEMINI_API_KEY=(.*)/);
     if (match && match[1]) {
-        apiKey = match[1].trim();
-        // Remove surrounding quotes if present (smart dotenv behavior)
-        if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
-            apiKey = apiKey.substring(1, apiKey.length - 1);
+        rawKeys = match[1].trim();
+        // Remove surrounding quotes if present
+        if ((rawKeys.startsWith('"') && rawKeys.endsWith('"')) || (rawKeys.startsWith("'") && rawKeys.endsWith("'"))) {
+            rawKeys = rawKeys.substring(1, rawKeys.length - 1);
         }
     }
 } catch (e) {
@@ -21,39 +21,53 @@ try {
     process.exit(1);
 }
 
-if (!apiKey) {
+if (!rawKeys) {
     console.error("No API Key found in .env.local");
     process.exit(1);
 }
 
-console.log("Found API Key:", apiKey.substring(0, 5) + "...");
-console.log("Checking available models...");
+const keys = rawKeys.split(',').map(k => k.trim()).filter(k => k.length > 0);
+console.log(`Found ${keys.length} API Key(s). Verifying each...`);
 
-// 2. Call ListModels
-const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+async function verifyKey(key, index) {
+    return new Promise((resolve) => {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`;
 
-https.get(url, (res) => {
-    let data = '';
-    res.on('data', (chunk) => data += chunk);
-    res.on('end', () => {
-        try {
-            const json = JSON.parse(data);
-            if (json.error) {
-                console.error("API Error:", JSON.stringify(json.error, null, 2));
-            } else if (json.models) {
-                console.log("✅ SUCCESS! Available User Models:");
-                const generateModels = json.models
-                    .filter(m => m.supportedGenerationMethods.includes("generateContent"))
-                    .map(m => m.name.replace("models/", ""));
-
-                console.log(generateModels.join("\n"));
-            } else {
-                console.log("Response:", json);
-            }
-        } catch (e) {
-            console.error("Parse Error:", data);
-        }
+        https.get(url, (res) => {
+            let data = '';
+            res.on('data', (chunk) => data += chunk);
+            res.on('end', () => {
+                try {
+                    const json = JSON.parse(data);
+                    if (json.error) {
+                        console.error(`❌ Key #${index + 1} (...${key.slice(-4)}) Failed:`, json.error.message);
+                        resolve(false);
+                    } else if (json.models) {
+                        const count = json.models.filter(m => m.supportedGenerationMethods.includes("generateContent")).length;
+                        console.log(`✅ Key #${index + 1} (...${key.slice(-4)}) works! Access to ${count} models.`);
+                        resolve(true);
+                    } else {
+                        console.log(`Key #${index + 1} Response:`, json);
+                        resolve(false);
+                    }
+                } catch (e) {
+                    console.error(`Key #${index + 1} Parse Error`);
+                    resolve(false);
+                }
+            });
+        }).on('error', (e) => {
+            console.error(`Key #${index + 1} Network Error:`, e);
+            resolve(false);
+        });
     });
-}).on('error', (e) => {
-    console.error("Network Error:", e);
-});
+}
+
+(async () => {
+    let successCount = 0;
+    for (let i = 0; i < keys.length; i++) {
+        const passed = await verifyKey(keys[i], i);
+        if (passed) successCount++;
+    }
+
+    console.log(`\nVerification Complete: ${successCount}/${keys.length} keys are active.`);
+})();

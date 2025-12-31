@@ -47,7 +47,7 @@ export default function AiTutorPanel({ history, setHistory, isLoading, onSendMes
                 </div>
                 <div>
                     <h3 className="font-bold text-indigo-100">AI Tutor</h3>
-                    <p className="text-xs text-indigo-300">Strict Professor Mode</p>
+                    <p className="text-xs text-indigo-300">Coding Mentor Mode</p>
                 </div>
             </div>
 
@@ -57,9 +57,9 @@ export default function AiTutorPanel({ history, setHistory, isLoading, onSendMes
                     <div className="flex flex-col items-center justify-center h-full text-center text-slate-500 space-y-4 opacity-60">
                         <Sparkles size={48} strokeWidth={1} />
                         <p className="max-w-[80%] text-sm">
-                            I am watching your code. <br />
-                            If you make a mistake, I will intervene.<br />
-                            Or ask me a question directly.
+                            I am here to guide you. <br />
+                            If you get stuck, ask for a hint!<br />
+                            I'll explain the logic without spoiling the answer.
                         </p>
                     </div>
                 )}
@@ -76,7 +76,7 @@ export default function AiTutorPanel({ history, setHistory, isLoading, onSendMes
                             {msg.role === "user" ? <User size={14} /> : <Bot size={14} />}
                         </div>
                         <div
-                            className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed
+                            className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed break-words whitespace-pre-wrap
                                 ${msg.role === "user"
                                     ? "bg-slate-800 text-slate-100 rounded-tr-none"
                                     : "bg-indigo-950/40 border border-indigo-500/20 text-indigo-50 rounded-tl-none"}`}
@@ -84,12 +84,17 @@ export default function AiTutorPanel({ history, setHistory, isLoading, onSendMes
                             <ReactMarkdown
                                 components={{
                                     code: ({ node, inline, className, children, ...props }: any) => {
-                                        return inline ? (
-                                            <code className="bg-black/30 px-1 py-0.5 rounded font-mono text-xs" {...props}>
+                                        // HEURISTIC: If it has newline, it's a block. If not, it's inline.
+                                        // We ignore the 'inline' prop because sometimes markdown parsers get it wrong for loose text.
+                                        const content = String(children).trim();
+                                        const isMultiLine = content.includes('\n');
+
+                                        return (!isMultiLine) ? (
+                                            <code className="bg-black/30 px-1.5 py-0.5 rounded text-indigo-200 font-mono text-xs inline mx-0.5" {...props}>
                                                 {children}
                                             </code>
                                         ) : (
-                                            <code className="block bg-black/30 p-2 rounded-lg font-mono text-xs overflow-x-auto my-2" {...props}>
+                                            <code className="block bg-black/30 p-3 rounded-lg font-mono text-xs overflow-x-auto my-2 text-indigo-100" {...props}>
                                                 {children}
                                             </code>
                                         );

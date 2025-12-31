@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Play, CheckCircle, Sparkles, Terminal, X, ChevronUp, ChevronDown } from "lucide-react";
+import { Play, CheckCircle, Sparkles, Terminal, X, ChevronUp, ChevronDown, Lightbulb } from "lucide-react";
 import { formatCodeForExecution } from "@/lib/codeRunner";
 import { updateUserProgress } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -15,10 +15,11 @@ interface EditorFooterProps {
     onSubmit: () => void;
     onAiToggle: () => void;
     isAiOpen: boolean;
-    onRunError?: (error: string) => void;
+    onHint: () => void;
+    onRunComplete?: (result: { stdout: string; stderr: string; isSuccess: boolean }) => void;
 }
 
-export default function EditorFooter({ code, language, testCases, onSubmit, onAiToggle, isAiOpen, onRunError }: EditorFooterProps) {
+export default function EditorFooter({ code, language, testCases, onSubmit, onAiToggle, isAiOpen, onRunComplete, onHint }: EditorFooterProps) {
     const { user } = useAuth();
     const params = useParams();
     const currentQuestionId = params?.questionId as string;
@@ -55,9 +56,12 @@ export default function EditorFooter({ code, language, testCases, onSubmit, onAi
                     stderr: data.run.stderr,
                 });
 
-                // AUTO-TRIGGER AI ON ERROR
-                if (data.run.stderr && onRunError) {
-                    onRunError(data.run.stderr);
+                if (data.run.stderr) {
+                    // Trigger AI on Error (Ghost)
+                    if (onRunComplete) onRunComplete({ stdout: data.run.stdout, stderr: data.run.stderr, isSuccess: false });
+                } else {
+                    // Trigger AI on Success (Ghost - for optimization tips)
+                    if (onRunComplete) onRunComplete({ stdout: data.run.stdout, stderr: "", isSuccess: true });
                 }
             } else {
                 setOutput({ stdout: "", stderr: "Error: No output received." });
@@ -66,7 +70,7 @@ export default function EditorFooter({ code, language, testCases, onSubmit, onAi
         } catch (error: any) {
             console.error("Execution error:", error);
             setOutput({ stdout: "", stderr: "Failed to connect to execution server." });
-            if (onRunError) onRunError(error.message || "Failed to connect to execution server.");
+            if (onRunComplete) onRunComplete({ stdout: "", stderr: error.message || "Execution Failed", isSuccess: false });
         } finally {
             setIsLoading(false);
         }
@@ -123,9 +127,12 @@ export default function EditorFooter({ code, language, testCases, onSubmit, onAi
 
                 if (data.run) {
                     const actualRaw = data.run.stdout.trim();
-                    // Normalize by removing all whitespace (spaces/newlines) to handle [1, 2] vs [1,2] mismatch
-                    const actualNorm = actualRaw.replace(/\s+/g, "");
-                    const expectedNorm = expected.replace(/\s+/g, "");
+                    // Normalize: Remove whitespace AND quotes to handle Type Mismatches (e.g. "1" vs 1)
+                    // This allows ["1", "2"] to match [1, 2]
+                    const normalizeStrict = (str: string) => str.replace(/[\s"']/g, "");
+
+                    const actualNorm = normalizeStrict(actualRaw);
+                    const expectedNorm = normalizeStrict(expected);
 
                     if (actualNorm === expectedNorm) {
                         setOutput(prev => ({
@@ -238,6 +245,16 @@ export default function EditorFooter({ code, language, testCases, onSubmit, onAi
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-3">
+
+                    {/* Hint Button */}
+                    <button
+                        onClick={onHint}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/5 bg-slate-800 text-yellow-500/80 hover:text-yellow-400 hover:border-yellow-500/30 transition-all text-sm font-medium"
+                        title="Get a Hint"
+                    >
+                        <Lightbulb size={16} />
+                        <span>Hint</span>
+                    </button>
 
                     {/* AI Tutor Toggle */}
                     <button

@@ -1,36 +1,40 @@
 import { NextResponse } from "next/server";
+import Groq from "groq-sdk";
 
-// Configuration
-const CANDIDATE_MODELS = [
-    "gemini-2.0-flash",         // New fast model
-    "gemini-2.0-flash-lite",    // Lightweight
-    "gemini-1.5-flash",         // Fallback
-    "gemini-pro-latest",        // Stable alias
-    "gemini-pro"                // Legacy safe mode
-];
+// Initialize Groq Client
+const groq = new Groq({
+    apiKey: process.env.GROQ_API_KEY
+});
 
+// The "Brain" - Preserved Logic
 const SYSTEM_PROMPT = `
-You are AlgoSensei, a strict but helpful computer science professor. 
-Your goal is to help the student debug their code or understand the algorithm WITHOUT giving away the answer.
+You are AlgoSensei, a helpful and insightful Coding Mentor.
+Style: Concise, structured, and easy to scan.
+Format: Use Bullet Points (•) for your explanations. Avoid big paragraphs.
+Highlighting: Use **Bold Markdown** for key concepts, variable names, and important instructions.
 
-RULES:
-1. NEVER provide the full corrected code. If you must show code, show only a snippet or a pseudo-code pattern.
-2. Identify the logic error or syntax mistake clearly.
-3. Give a Socratic hint (e.g., "Look at how you're incrementing 'i', is that correct for a while loop?").
-4. Be concise. Keep your responses to 2-3 sentences max. 
-5. If the student asks for the answer, firmly refuse and guide them back to the logic.
-6. Use markdown for code snippets.
+Scenario A (Logic/Syntax Error):
+• **Error:** Identify the specific line and error type.
+• **Why:** Explain the issue in 1 sentence.
+• **Fix:** Suggest the correct logic concept.
 
-CONTEXT:
-User is solving a coding problem. They might send you their current code and an error message.
+Scenario B (Incomplete/Stuck):
+• Analyze the current state.
+• Describe the **Next Logical Step** in plain English.
+• Break it down into 2-3 mini-steps if complex.
+
+Scenario C (Correct Output):
+• If correct, output EXACTLY: "**Your solution looks correct. You are ready to Submit!**"
+• Add 1 short bullet of praise.
+
+Constraint: NEVER write the actual code block. Describe the logic in words.
+Constraint: Keep responses short and punchy.
 `;
 
 export async function POST(req: Request) {
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-        console.error("Error: GEMINI_API_KEY is missing.");
-        return NextResponse.json({ text: "System Error: Gemini API Key is missing." });
+    if (!process.env.GROQ_API_KEY) {
+        console.error("Error: GROQ_API_KEY is missing.");
+        return NextResponse.json({ text: "System Error: Groq API Key is missing. Please add it to .env.local" });
     }
 
     try {
@@ -38,7 +42,16 @@ export async function POST(req: Request) {
 
         // 1. Construct Prompt Context
         let promptContext = "";
-        if (context) {
+
+        // Check if this is an automated run result (Ghost Trigger)
+        if (context?.executionResult) {
+            promptContext = `
+[System Log: Output="${context.executionResult.stdout || ''}", Error="${context.executionResult.stderr || ''}", Code="${context.code || ''}"]
+Problem Context: ${context.questionTitle}
+User Question: ${message || "Analyze this execution result."}
+`;
+        } else if (context) {
+            // Standard Chat Context
             promptContext = `
 [STUDENT CONTEXT]
 Problem: ${context.questionTitle}
@@ -46,78 +59,48 @@ Current Code:
 \`\`\`${context.language || 'text'}
 ${context.code}
 \`\`\`
-${context.error ? `Error Log:\n${context.error}` : ""}
 [/STUDENT CONTEXT]
+User Question: ${message}
 `;
+        } else {
+            promptContext = `User Question: ${message}`;
         }
 
-        // 2. Build Contents Array
-        // We merge the System Prompt + Context + User Message into the latest message
-        // Or construct a chat history. 
-        // Best approach for compatibility: Prepend System Prompt to history? 
-        // Actually, "systemInstruction" is supported in beta but let's stick to standard message merging for "gemini-pro" safety.
+        // 2. Prepare Messages for Groq (OpenAI Compatible)
+        // Convert Gemini History (parts) to Groq History (content)
+        const groqHistory = (history || []).map((msg: any) => ({
+            role: msg.role === "model" ? "assistant" : "user",
+            content: msg.parts?.[0]?.text || msg.content || ""
+        }));
 
-        const fullUserMessage = `${SYSTEM_PROMPT}\n\n${promptContext}\n\nUser Question: ${message}`;
-
-        // Combine existing history with the NEW message
-        // History from frontend is: [{ role: "user" | "model", parts: [{ text: "..." }] }]
-        // We need to append the new user turn.
-        const contents = [
-            ...(history || []),
-            {
-                role: "user",
-                parts: [{ text: fullUserMessage }]
-            }
+        const messages = [
+            { role: "system", content: SYSTEM_PROMPT },
+            ...groqHistory,
+            { role: "user", content: promptContext }
         ];
 
-        // 3. Try Models Sequentially
-        let finalResponse = null;
-        let lastError = null;
+        // 3. Call Groq Llama 3
+        console.log("🚀 Sending request to Groq (Llama3-8b)...");
 
-        for (const model of CANDIDATE_MODELS) {
-            console.log(`Trying model: ${model}...`);
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const completion = await groq.chat.completions.create({
+            messages: messages as any,
+            model: "llama-3.3-70b-versatile", // Latest Stable Llama 3.3
+            temperature: 0.6,
+            max_tokens: 1024,
+            stream: false
+        });
 
-            try {
-                const response = await fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        contents: contents,
-                        generationConfig: {
-                            maxOutputTokens: 300,
-                            temperature: 0.7
-                        }
-                    })
-                });
+        const reply = completion.choices[0]?.message?.content || "";
 
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-                        finalResponse = data.candidates[0].content.parts[0].text;
-                        console.log(`Success with ${model}`);
-                        break; // Stop loop on success
-                    }
-                } else {
-                    const errText = await response.text();
-                    console.warn(`Failed ${model}: ${response.status} - ${errText}`);
-                    lastError = `[${model}] ${response.status}: ${errText}`;
-                }
-            } catch (err: any) {
-                console.warn(`Network Error on ${model}:`, err);
-                lastError = err.message;
-            }
-        }
-
-        if (finalResponse) {
-            return NextResponse.json({ text: finalResponse });
+        if (reply) {
+            console.log("✅ Groq Response Received");
+            return NextResponse.json({ text: reply });
         } else {
-            console.error("All models failed. Last error:", lastError);
-            return NextResponse.json({ text: `AI Tutor Unavailable. (All models failed. Last Error: ${lastError})` });
+            throw new Error("Empty response from Groq");
         }
 
     } catch (error: any) {
-        console.error("Gemini Route Critical Error:", error);
+        console.error("Groq API Error:", error);
         return NextResponse.json({ text: `System Error: ${error.message}` });
     }
 }

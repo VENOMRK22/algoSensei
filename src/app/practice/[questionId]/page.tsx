@@ -32,6 +32,7 @@ export default function PracticePage() {
     const [history, setHistory] = useState<any[]>([]);
     const [aiLoading, setAiLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<"problem" | "ai">("problem");
+    const [hasUnreadAi, setHasUnreadAi] = useState(false); // Red Dot State
 
     // Fetch Question
     useEffect(() => {
@@ -47,7 +48,6 @@ export default function PracticePage() {
                     const qData = docSnap.data() as Question;
                     setQuestion(qData);
                     // Set default code based on current language
-                    // Note: Use 'javascript' as simplified key if needed, or map strictly
                     setCode(qData.defaultCode[language] || "");
                 } else {
                     setNotFound(true);
@@ -63,38 +63,12 @@ export default function PracticePage() {
         fetchQuestion();
     }, [questionId]);
 
-    // Update code when language changes (if user hasn't typed much? Or just always reset for now?)
-    // In a real app, we'd cache the user's draft for each language.
-    // For now, let's just reset to default boilerplate of the new language.
+    // Added: Update code when language changes
     useEffect(() => {
         if (question) {
             setCode(question.defaultCode[language] || "");
         }
     }, [language, question]);
-
-    if (loading) {
-        return (
-            <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center space-y-4">
-                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-slate-400 font-medium animate-pulse">Loading Workspace...</p>
-            </div>
-        );
-    }
-
-    if (notFound || !question) {
-        return (
-            <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
-                <h1 className="text-3xl font-bold text-white mb-2">Problem Not Found</h1>
-                <p className="text-slate-400 mb-6">The question ID you are looking for does not exist.</p>
-                <button
-                    onClick={() => router.push('/dashboard')}
-                    className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
-                >
-                    Return to Dashboard
-                </button>
-            </div>
-        );
-    }
 
     const handleRun = () => {
         alert("Running Code... (Logic coming soon)");
@@ -104,23 +78,20 @@ export default function PracticePage() {
         alert("Submitting Code... (Logic coming soon)");
     };
 
-    // Fetch Question logic... (omitted for brevity, keep existing)
-
-    // Fetch Question logic... (omitted for brevity, keep existing)
-    // ...
-
     const handleSendMessage = async (userMessage: string) => {
-        // Add User Message
+        // Add User Message (Visible)
         const newHistory = [...history, { role: "user", text: userMessage }];
         setHistory(newHistory);
         setAiLoading(true);
+        setActiveTab("ai"); // Force switch on manual chat
+        setHasUnreadAi(false); // Clear dot if user is typing
 
         try {
             const response = await fetch("/api/ai", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    history: newHistory.map(h => ({ role: h.role, parts: [{ text: h.text }] })), // Format for Gemini
+                    history: newHistory.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
                     message: userMessage,
                     context: {
                         code,
@@ -136,21 +107,52 @@ export default function PracticePage() {
             }
         } catch (error) {
             console.error("AI Error:", error);
-            setHistory(prev => [...prev, { role: "model", text: "Something went wrong. I cannot answer right now." }]);
+            setHistory(prev => [...prev, { role: "model", text: "Something went wrong." }]);
         } finally {
             setAiLoading(false);
         }
     };
 
-    // Auto-trigger from Footer (passed down)
-    const handleAiErrorTrigger = async (errorLog: string) => {
-        setActiveTab("ai");
-        // Don't send immediately visible message to user, maybe just a system note? 
-        // Or simulation: User says "I got this error..."
-        const userMessage = `I got this error when running my code:\n${errorLog}\n\nPlease help me fix it without giving the answer.`;
-        handleSendMessage(userMessage);
-    };
+    // "Ghost" Trigger - Silent send
+    const handleRunComplete = async (result: { stdout: string; stderr: string; isSuccess: boolean }) => {
+        setAiLoading(true);
+        // Do NOT add user message to history.
+        // If Error -> Switch tab immediately.
+        if (!result.isSuccess) {
+            setActiveTab("ai");
+            setHasUnreadAi(false);
+        } else {
+            // If Success -> Don't switch, just show Red Dot.
+            setHasUnreadAi(true);
+        }
 
+        try {
+            const response = await fetch("/api/ai", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    history: history.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
+                    message: "", // Empty message signals "System Event" to our updated API
+                    context: {
+                        code,
+                        language,
+                        questionTitle: question?.title,
+                        executionResult: result // Pass the full result object
+                    }
+                }),
+            });
+
+            const data = await response.json();
+            if (data.text) {
+                // Append AI response ONLY
+                setHistory(prev => [...prev, { role: "model", text: data.text }]);
+            }
+        } catch (error) {
+            console.error("AI Ghost Error:", error);
+        } finally {
+            setAiLoading(false);
+        }
+    };
 
     if (loading) return <div className="h-screen w-full bg-slate-950 flex items-center justify-center text-slate-400">Loading Workspace...</div>;
     if (notFound || !question) return <div className="h-screen w-full bg-slate-950 flex items-center justify-center text-white">Problem Not Found</div>;
@@ -172,11 +174,21 @@ export default function PracticePage() {
                                     Problem
                                 </button>
                                 <button
-                                    onClick={() => setActiveTab("ai")}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 ${activeTab === 'ai' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-indigo-300'}`}
+                                    onClick={() => {
+                                        setActiveTab("ai");
+                                        setHasUnreadAi(false);
+                                    }}
+                                    className={`relative px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 ${activeTab === 'ai' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-indigo-300'}`}
                                 >
                                     <Sparkles size={12} />
                                     AI Tutor
+                                    {/* Red Dot Notification */}
+                                    {hasUnreadAi && activeTab !== 'ai' && (
+                                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                        </span>
+                                    )}
                                 </button>
                             </div>
 
@@ -217,7 +229,11 @@ export default function PracticePage() {
                                 onSubmit={handleSubmit}
                                 onAiToggle={() => setActiveTab(prev => prev === 'ai' ? 'problem' : 'ai')}
                                 isAiOpen={activeTab === 'ai'}
-                                onRunError={handleAiErrorTrigger} // Pass the trigger callback
+                                onRunComplete={handleRunComplete}
+                                onHint={() => {
+                                    setActiveTab("ai");
+                                    handleSendMessage("Can you give me a small hint about the next step? Don't give me the answer.");
+                                }}
                             />
                         </div>
                     </ResizablePanel>
