@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
-import Groq from "groq-sdk";
+import { getGroqClient } from "@/lib/groq";
 import { doc, getDoc } from "firebase/firestore";
 import { db as firestoreDb } from "@/lib/firebase";
 import { ALL_QUESTIONS } from "@/lib/allQuestions";
-
-const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY
-});
 
 // Helper to minify question data for the prompt
 const minifyQuestions = (questions: any[]) => {
@@ -44,6 +40,7 @@ Output Format (JSON ONLY):
 `;
 
 export async function POST(req: Request) {
+    const groq = getGroqClient();
     try {
         const { uid } = await req.json();
 

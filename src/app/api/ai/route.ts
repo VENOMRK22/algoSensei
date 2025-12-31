@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import Groq from "groq-sdk";
+import { getGroqClient } from "@/lib/groq";
 
 // Initialize Groq Client
-const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY
-});
+// (Moved inside POST)
 
 // The "Brain" - Preserved Logic
 const SYSTEM_PROMPT = `
@@ -36,9 +34,11 @@ Analyze the user's code/output and determine which **ONE** Scenario applies.
 `;
 
 export async function POST(req: Request) {
-    if (!process.env.GROQ_API_KEY) {
-        console.error("Error: GROQ_API_KEY is missing.");
-        return NextResponse.json({ text: "System Error: Groq API Key is missing. Please add it to .env.local" });
+    let groq;
+    try {
+        groq = getGroqClient();
+    } catch (e) {
+        return NextResponse.json({ text: "System Error: Missing GROQ_API_KEY in .env.local" });
     }
 
     try {

@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
-import Groq from "groq-sdk";
-
-const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY
-});
+import { getGroqClient } from "@/lib/groq";
 
 const SYSTEM_PROMPT = `
 You are Jarvis, an expert Technical Interviewer at a top tech company.
@@ -22,6 +18,7 @@ Your Goal: Vet the candidate's logic and communication before they write code.
 `;
 
 export async function POST(req: Request) {
+    const groq = getGroqClient();
     try {
         const { messages, context } = await req.json();
 

@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import Groq from "groq-sdk";
-
-const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY
-});
+import { getGroqClient } from "@/lib/groq";
 
 export async function POST(req: Request) {
-    if (!process.env.GROQ_API_KEY) {
+    let groq;
+    try {
+        groq = getGroqClient();
+    } catch (e) {
         return NextResponse.json({ error: "Groq API Key missing" }, { status: 500 });
     }
 
