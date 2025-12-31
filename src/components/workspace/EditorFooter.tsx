@@ -12,12 +12,13 @@ interface EditorFooterProps {
     language: string;
     testCases?: TestCase[]; // Make optional or required based on usage
     onRun?: () => void;
-    onSubmit: () => void; // Prop might be unused if we handle validation internally, but usually kept for parent
+    onSubmit: () => void;
     onAiToggle: () => void;
     isAiOpen: boolean;
+    onRunError?: (error: string) => void;
 }
 
-export default function EditorFooter({ code, language, testCases, onSubmit, onAiToggle, isAiOpen }: EditorFooterProps) {
+export default function EditorFooter({ code, language, testCases, onSubmit, onAiToggle, isAiOpen, onRunError }: EditorFooterProps) {
     const { user } = useAuth();
     const params = useParams();
     const currentQuestionId = params?.questionId as string;
@@ -32,8 +33,7 @@ export default function EditorFooter({ code, language, testCases, onSubmit, onAi
         setOutput(null);
 
         try {
-            // Prepare code for execution (wrap with test runner)
-            // Use the first test case input, or a default if none exist
+            // Prepare code...
             const runInput = testCases && testCases.length > 0 ? testCases[0].input : "";
             const executableCode = formatCodeForExecution(language, code, runInput);
 
@@ -54,13 +54,19 @@ export default function EditorFooter({ code, language, testCases, onSubmit, onAi
                     stdout: data.run.stdout,
                     stderr: data.run.stderr,
                 });
+
+                // AUTO-TRIGGER AI ON ERROR
+                if (data.run.stderr && onRunError) {
+                    onRunError(data.run.stderr);
+                }
             } else {
                 setOutput({ stdout: "", stderr: "Error: No output received." });
             }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Execution error:", error);
             setOutput({ stdout: "", stderr: "Failed to connect to execution server." });
+            if (onRunError) onRunError(error.message || "Failed to connect to execution server.");
         } finally {
             setIsLoading(false);
         }
