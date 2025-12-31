@@ -14,7 +14,7 @@ import AIPanel from "@/components/workspace/AIPanel";
 import AiTutorPanel from "@/components/workspace/AiTutorPanel";
 import VictoryOverlay from "@/components/game/VictoryOverlay";
 import { useAuth } from "@/context/AuthContext";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Mic, Code } from "lucide-react";
 
 export default function PracticePage() {
     const { user } = useAuth();
@@ -33,6 +33,7 @@ export default function PracticePage() {
     // UI State
     const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
     const [showVictory, setShowVictory] = useState(false); // Victory State
+    const [showLobby, setShowLobby] = useState(true); // Initial Mode Selection
 
     // AI State
     const [history, setHistory] = useState<any[]>([]);
@@ -271,6 +272,48 @@ export default function PracticePage() {
                 userId={user?.uid || ""}
                 onClose={() => setShowVictory(false)}
             />
+
+            {/* Pre-Lobby / Mode Selection Modal */}
+            {showLobby && !loading && question && (
+                <div className="fixed inset-0 z-[60] bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-lg w-full shadow-2xl space-y-8 animate-in fade-in zoom-in duration-300">
+                        <div className="text-center space-y-2">
+                            <h2 className="text-3xl font-bold text-white">Choose Your Mode</h2>
+                            <p className="text-slate-400">How would you like to tackle <span className="text-indigo-400 font-semibold">{question.title}</span>?</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Option 1: Interview */}
+                            <button
+                                onClick={() => router.push(`/interview/${questionId}`)}
+                                className="group relative p-6 rounded-2xl bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white transition-all text-left space-y-4 hover:-translate-y-1 hover:shadow-lg hover:shadow-indigo-500/20"
+                            >
+                                <div className="p-3 bg-indigo-500/20 rounded-xl w-fit group-hover:bg-white/20 transition-colors">
+                                    <Mic size={24} className="text-indigo-400 group-hover:text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-white">Mock Interview</h3>
+                                    <p className="text-sm text-slate-400 group-hover:text-indigo-100">Discuss approach logic via voice/chat before coding.</p>
+                                </div>
+                            </button>
+
+                            {/* Option 2: Coding */}
+                            <button
+                                onClick={() => setShowLobby(false)}
+                                className="group relative p-6 rounded-2xl bg-slate-800 border border-white/5 hover:bg-emerald-600 hover:border-emerald-500/50 hover:text-white transition-all text-left space-y-4 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-500/20"
+                            >
+                                <div className="p-3 bg-slate-700 rounded-xl w-fit group-hover:bg-white/20 transition-colors">
+                                    <Code size={24} className="text-emerald-400 group-hover:text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-white">Code Directly</h3>
+                                    <p className="text-sm text-slate-400 group-hover:text-emerald-100">Jump straight into the IDE and start solving.</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
