@@ -88,28 +88,144 @@ except Exception as e:
         `.trim();
     }
 
-    // Java support: Strip "public" from Solution class to avoid "class Solution is public, should be declared in a file named Solution.java"
+    // Java support
     if (language === "java") {
-        const safeCode = normalizedCode.replace(/public\s+class\s+Solution/g, "class Solution");
-        return `
+        // Case 1: User provided a standalone class with public static void main
+        if (normalizedCode.includes("public static void main")) {
+            // Extract the original class name
+            const classNameMatch = normalizedCode.match(/public\s+class\s+(\w+)/);
+            const originalClassName = classNameMatch ? classNameMatch[1] : "Main";
+
+            // Rename the class definition to "Main"
+            let runnableCode = normalizedCode.replace(/public\s+class\s+\w+/g, "public class Main");
+
+            // CRITICAL FIX: If the user instantiates their own class (e.g. "PlusOne solver = new PlusOne()"),
+            // we must ALSO rename those references to "Main" because we just renamed the class definition.
+            if (originalClassName !== "Main") {
+                const regex = new RegExp(`\\b${originalClassName}\\b`, 'g');
+                runnableCode = runnableCode.replace(regex, "Main");
+            }
+
+            return `
 import java.util.*;
 import java.io.*;
+${runnableCode}
+            `.trim();
+        }
 
-${safeCode}
+        // Case 2: Standard LeetCode style (Solution class) -> Wrap it
+
+        let safeCode = normalizedCode.replace(/public\s+class\s+\w+/g, "class Solution");
+
+        // Hoist Imports
+        const imports = [];
+        const lines = safeCode.split('\n');
+        const cleanLines = [];
+        for (const line of lines) {
+            if (line.trim().startsWith('import ')) {
+                imports.push(line.trim());
+            } else {
+                cleanLines.push(line);
+            }
+        }
+        safeCode = cleanLines.join('\n');
+        const importBlock = Array.from(new Set([...imports, "import java.util.*;", "import java.io.*;", "import java.lang.reflect.*;"])).join('\n');
+
+        // Helper method for array printing in Java to match JSON format [1,2,3]
+        const printerHelper = `
+    private static void printResult(Object result) {
+        if (result == null) {
+            System.out.println("null");
+        } else if (result.getClass().isArray()) {
+            if (result instanceof int[]) {
+                System.out.println(Arrays.toString((int[]) result).replace(" ", ""));
+            } else if (result instanceof Object[]) {
+                System.out.println(Arrays.deepToString((Object[]) result).replace(" ", ""));
+            } else {
+                 // Fallback for other arrays
+                 System.out.println(Arrays.toString((Object[])result));
+            }
+        } else {
+            System.out.println(result);
+        }
+    }
+        `;
+
+        // Input Parser Helper (Basic Support for int[] and int)
+        const parserHelper = `
+    private static Object parseInput(String input, Class<?> type) {
+        input = input.trim();
+        if (type == int[].class) {
+            input = input.replace("[", "").replace("]", "");
+            if (input.isEmpty()) return new int[0];
+            String[] parts = input.split(",");
+            int[] arr = new int[parts.length];
+            for(int i=0; i<parts.length; i++) arr[i] = Integer.parseInt(parts[i].trim());
+            return arr;
+        } else if (type == int.class || type == Integer.class) {
+            return Integer.parseInt(input);
+        } else if (type == String.class) {
+             // Basic quote check
+             if (input.startsWith("\\"") && input.endsWith("\\"")) {
+                 return input.substring(1, input.length() - 1);
+             }
+             return input;
+        }
+        // Fallback: Return raw string or null (improve in future)
+        return null; 
+    }
+        `;
+
+        return `
+${importBlock}
 
 public class Main {
     public static void main(String[] args) {
         try {
             Solution sol = new Solution();
-            // MVP: We don't have a robust input parser for Java yet.
-            // But we can try to invoke the method if it doesn't require complex args, 
-            // or just print a success message so the user knows code compiled.
-            System.out.println("Java execution successful (Output validation coming soon).");
+            
+            // Reflection: Find the first public method that returns something
+            Method[] methods = Solution.class.getDeclaredMethods();
+            Method targetMethod = null;
+            for (Method m : methods) {
+                if (Modifier.isPublic(m.getModifiers())) {
+                    targetMethod = m;
+                    break;
+                }
+            }
+
+            if (targetMethod == null) {
+                System.out.println("Error: No public method found in Solution class.");
+                return;
+            }
+
+            // Parse Input
+            // We assume inputStr comes formatted from the TS side (e.g. "[1,2,3]")
+            String rawInput = "${inputStr.replace(/"/g, '\\"')}";
+            Class<?>[] paramTypes = targetMethod.getParameterTypes();
+            
+            Object arg = null;
+            if (paramTypes.length > 0) {
+                arg = parseInput(rawInput, paramTypes[0]);
+            }
+
+            // Invoke
+            Object result = targetMethod.invoke(sol, arg);
+            
+            // Print Output
+            printResult(result);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+    ${printerHelper}
+
+    ${parserHelper}
 }
+
+${safeCode}
         `.trim();
     }
 

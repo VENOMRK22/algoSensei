@@ -1,10 +1,13 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-// Initialize Gemini
-// Ensure you have GEMINI_API_KEY in your .env.local
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+// Configuration
+const CANDIDATE_MODELS = [
+    "gemini-2.0-flash",         // New fast model
+    "gemini-2.0-flash-lite",    // Lightweight
+    "gemini-1.5-flash",         // Fallback
+    "gemini-pro-latest",        // Stable alias
+    "gemini-pro"                // Legacy safe mode
+];
 
 const SYSTEM_PROMPT = `
 You are AlgoSensei, a strict but helpful computer science professor. 
@@ -23,17 +26,20 @@ User is solving a coding problem. They might send you their current code and an 
 `;
 
 export async function POST(req: Request) {
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+        console.error("Error: GEMINI_API_KEY is missing.");
+        return NextResponse.json({ text: "System Error: Gemini API Key is missing." });
+    }
+
     try {
         const { history, message, context } = await req.json();
 
-        // Construct the full prompt context
-        // History is the chat history: [{ role: "user" | "model", parts: string }]
-        // Context contains { code: string, questionTitle: string, error: string }
-
-        let promptPreamble = "";
-
+        // 1. Construct Prompt Context
+        let promptContext = "";
         if (context) {
-            promptPreamble = `
+            promptContext = `
 [STUDENT CONTEXT]
 Problem: ${context.questionTitle}
 Current Code:
@@ -45,32 +51,73 @@ ${context.error ? `Error Log:\n${context.error}` : ""}
 `;
         }
 
-        const chat = model.startChat({
-            history: [
-                {
-                    role: "user",
-                    parts: [{ text: SYSTEM_PROMPT }]
-                },
-                {
-                    role: "model",
-                    parts: [{ text: "Understood. I am AlgoSensei. I will guide the student strictly but helpfully without revealing the answer." }]
-                },
-                ...(history || [])
-            ],
-            generationConfig: {
-                maxOutputTokens: 250, // Keep it concise
+        // 2. Build Contents Array
+        // We merge the System Prompt + Context + User Message into the latest message
+        // Or construct a chat history. 
+        // Best approach for compatibility: Prepend System Prompt to history? 
+        // Actually, "systemInstruction" is supported in beta but let's stick to standard message merging for "gemini-pro" safety.
+
+        const fullUserMessage = `${SYSTEM_PROMPT}\n\n${promptContext}\n\nUser Question: ${message}`;
+
+        // Combine existing history with the NEW message
+        // History from frontend is: [{ role: "user" | "model", parts: [{ text: "..." }] }]
+        // We need to append the new user turn.
+        const contents = [
+            ...(history || []),
+            {
+                role: "user",
+                parts: [{ text: fullUserMessage }]
             }
-        });
+        ];
 
-        // If this is an auto-trigger from an error, the message might be the error summary
-        const result = await chat.sendMessage(promptPreamble + "\n" + message);
-        const response = result.response;
-        const text = response.text();
+        // 3. Try Models Sequentially
+        let finalResponse = null;
+        let lastError = null;
 
-        return NextResponse.json({ text });
+        for (const model of CANDIDATE_MODELS) {
+            console.log(`Trying model: ${model}...`);
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    } catch (error) {
-        console.error("Gemini API Error:", error);
-        return NextResponse.json({ error: "Professor is currently unavailable (API Error)." }, { status: 500 });
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: contents,
+                        generationConfig: {
+                            maxOutputTokens: 300,
+                            temperature: 0.7
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+                        finalResponse = data.candidates[0].content.parts[0].text;
+                        console.log(`Success with ${model}`);
+                        break; // Stop loop on success
+                    }
+                } else {
+                    const errText = await response.text();
+                    console.warn(`Failed ${model}: ${response.status} - ${errText}`);
+                    lastError = `[${model}] ${response.status}: ${errText}`;
+                }
+            } catch (err: any) {
+                console.warn(`Network Error on ${model}:`, err);
+                lastError = err.message;
+            }
+        }
+
+        if (finalResponse) {
+            return NextResponse.json({ text: finalResponse });
+        } else {
+            console.error("All models failed. Last error:", lastError);
+            return NextResponse.json({ text: `AI Tutor Unavailable. (All models failed. Last Error: ${lastError})` });
+        }
+
+    } catch (error: any) {
+        console.error("Gemini Route Critical Error:", error);
+        return NextResponse.json({ text: `System Error: ${error.message}` });
     }
 }

@@ -28,6 +28,11 @@ export default function PracticePage() {
     // UI State
     const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
 
+    // AI State
+    const [history, setHistory] = useState<any[]>([]);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<"problem" | "ai">("problem");
+
     // Fetch Question
     useEffect(() => {
         if (!questionId) return;
@@ -99,10 +104,7 @@ export default function PracticePage() {
         alert("Submitting Code... (Logic coming soon)");
     };
 
-    // AI State
-    const [history, setHistory] = useState<any[]>([]);
-    const [aiLoading, setAiLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState<"problem" | "ai">("problem");
+    // Fetch Question logic... (omitted for brevity, keep existing)
 
     // Fetch Question logic... (omitted for brevity, keep existing)
     // ...

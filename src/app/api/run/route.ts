@@ -26,6 +26,7 @@ export async function POST(request: Request) {
             version: langConfig.version,
             files: [
                 {
+                    name: language === 'java' ? 'Main.java' : (language === 'python' ? 'main.py' : 'script.js'),
                     content: code,
                 },
             ],
