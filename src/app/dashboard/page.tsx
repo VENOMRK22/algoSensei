@@ -20,12 +20,10 @@ export default function DashboardPage() {
     const router = useRouter();
 
     useEffect(() => {
-        if (!loading && !user) {
+        if (!user) {
             router.push("/login");
             return;
         }
-
-        if (!user) return; // Wait for user to be populated
 
         // Real-time listener for user stats
         const itemsRef = doc(db, "users", user.uid);
@@ -37,7 +35,7 @@ export default function DashboardPage() {
         });
 
         return () => unsubscribe();
-    }, [user, loading, router]);
+    }, [user, router]);
 
     // Loading Skeleton
     if (loading) {
