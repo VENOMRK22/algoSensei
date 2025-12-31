@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { TOPICS, LEVELS } from "@/lib/topics";
@@ -16,8 +17,15 @@ export default function DashboardPage() {
     const [userData, setUserData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
+    const router = useRouter();
+
     useEffect(() => {
-        if (!user) return;
+        if (!loading && !user) {
+            router.push("/login");
+            return;
+        }
+
+        if (!user) return; // Wait for user to be populated
 
         // Real-time listener for user stats
         const itemsRef = doc(db, "users", user.uid);
@@ -29,7 +37,7 @@ export default function DashboardPage() {
         });
 
         return () => unsubscribe();
-    }, [user]);
+    }, [user, loading, router]);
 
     // Loading Skeleton
     if (loading) {
