@@ -1,14 +1,5 @@
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
-import { db } from "@/lib/firebase-admin"; // We need admin to bypass client-side restrictions or just use normal firebase if server-compatible?
-// Actually, for Next.js API routes, standard firebase/firestore works if rules allow, or we use "firebase-admin" for privileged access.
-// Since I don't see firebase-admin setup in the file list, I'll use the client SDK with the assumption it works in Node environment 
-// (which it does, but requires standard auth or open rules). 
-// SAFEST BET: Ask client to pass the necessary context (solvedIds, knownTopics) to avoid DB permission issues server-side 
-// if we haven't set up Service Account.
-// RE-READING PROMPT: "Fetch Context: Get the user's solvedQuestionIds... from Firebase."
-// I will try to use the `db` from `@/lib/firebase`.
-
 import { doc, getDoc } from "firebase/firestore";
 import { db as firestoreDb } from "@/lib/firebase";
 import { ALL_QUESTIONS } from "@/lib/allQuestions";
