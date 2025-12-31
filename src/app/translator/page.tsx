@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Editor } from "@monaco-editor/react";
 import { ArrowRightLeft, Sparkles, Copy, Check, MessageSquare } from "lucide-react";
-import { Switch } from "@/components/ui/switch"; // Assuming we have shadcn or I'll use a custom one
+
 
 // Simple toggle component if shadcn switch is missing
 const SimpleSwitch = ({ checked, onCheckedChange }: { checked: boolean, onCheckedChange: (c: boolean) => void }) => (
