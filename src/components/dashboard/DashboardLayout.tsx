@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import MobileNav from "./MobileNav";
 
@@ -8,21 +9,37 @@ export default function DashboardLayout({
 }: {
     children: React.ReactNode;
 }) {
+    const [particles, setParticles] = useState<number[]>([]);
+
+    useEffect(() => {
+        setParticles([...Array(20)].map((_, i) => i));
+    }, []);
+
     return (
-        <div className="min-h-screen bg-slate-950 flex text-slate-100">
+        <div className="flex h-screen bg-transparent overflow-hidden">
+            <div className="aurora-bg" />
+
+            {/* Floating Particles */}
+            <div className="particles-container">
+                {particles.map((i) => (
+                    <div
+                        key={i}
+                        className="particle"
+                        style={{
+                            left: `${Math.random() * 100}%`,
+                            animationDelay: `${Math.random() * 5}s`,
+                            opacity: Math.random() * 0.5 + 0.3
+                        }}
+                    />
+                ))}
+            </div>
+
             {/* Desktop Sidebar */}
             <Sidebar />
 
             {/* Main Content Area */}
-            <main className="flex-1 relative overflow-y-auto h-screen w-full bg-gradient-to-tr from-slate-950 via-slate-950 to-slate-900">
-                {/* Background Gradients/Glows */}
-                <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-                    <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-[100px]"></div>
-                    <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] bg-purple-900/10 rounded-full blur-[100px]"></div>
-                </div>
-
-                {/* Scrollable Content */}
-                <div className="relative z-10 p-6 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto">
+            <main className="flex-1 p-4 md:p-8 overflow-y-auto custom-scrollbar relative z-10 w-full">
+                <div className="max-w-7xl mx-auto md:space-y-10 pb-24 md:pb-0">
                     {children}
                 </div>
             </main>

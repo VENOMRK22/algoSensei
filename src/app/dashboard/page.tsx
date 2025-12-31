@@ -9,18 +9,14 @@ import { TOPICS, LEVELS } from "@/lib/topics";
 import { getQuestionsByTopicId } from "@/lib/allQuestions";
 import { Question } from "@/types/question";
 import StatCard from "@/components/dashboard/StatCard";
-import TopicCard from "@/components/dashboard/TopicCard";
-import { Trophy, Target, Zap, Activity, ChevronRight } from "lucide-react";
+import LearningPathCard from "@/components/dashboard/LearningPathCard";
+import { Trophy, Target, Zap, Sparkles } from "lucide-react";
 
 export default function DashboardPage() {
     const { user } = useAuth();
+    const router = useRouter();
     const [userData, setUserData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-
-    // --- SMART NAVIGATOR STATE ---
-    // (Moved to new page logic, removed from here)
-
-    const router = useRouter();
 
     useEffect(() => {
         if (!user) {
@@ -28,7 +24,6 @@ export default function DashboardPage() {
             return;
         }
 
-        // Real-time listener for user stats
         const itemsRef = doc(db, "users", user.uid);
         const unsubscribe = onSnapshot(itemsRef, (doc) => {
             if (doc.exists()) {
@@ -40,13 +35,11 @@ export default function DashboardPage() {
         return () => unsubscribe();
     }, [user, router]);
 
-
-    // Generic Logic & Stats (Refactored to be safe even if loading)
+    // Derived Stats
     const currentXP = userData?.xp || 0;
     const currentLevel = Math.floor(currentXP / 100) + 1;
     const solvedCount = userData?.solvedQuestionIds?.length || 0;
 
-    // Helper to count solved questions per topic
     const getSolvedForTopic = (topicId: string) => {
         if (!userData?.solvedQuestionIds) return 0;
         const topicQuestions = getQuestionsByTopicId(topicId);
@@ -56,113 +49,93 @@ export default function DashboardPage() {
         return solvedInTopic.length;
     };
 
-    // Loading Skeleton (MUST be after all hooks)
     if (loading) {
         return (
-            <div className="space-y-8 animate-pulse">
-                <div className="h-8 w-48 bg-slate-800 rounded-lg"></div>
+            <div className="space-y-8 animate-pulse max-w-6xl mx-auto mt-10">
+                <div className="flex justify-between items-end">
+                    <div className="h-10 w-48 bg-white/5 rounded-lg"></div>
+                    <div className="h-14 w-48 bg-white/5 rounded-2xl"></div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {[1, 2, 3].map(i => <div key={i} className="h-32 bg-slate-800 rounded-2xl"></div>)}
+                    {[1, 2, 3].map(i => <div key={i} className="h-40 bg-white/5 rounded-3xl"></div>)}
                 </div>
                 <div className="space-y-12">
-                    {[1, 2, 3, 4, 5].map(i => (
-                        <div key={i} className="space-y-4">
-                            <div className="h-6 w-32 bg-slate-800 rounded-lg"></div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {[1, 2, 3, 4].map(j => <div key={j} className="h-56 bg-slate-800 rounded-2xl"></div>)}
-                            </div>
-                        </div>
-                    ))}
+                    <div className="h-8 w-64 bg-white/5 rounded-lg"></div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[1, 2, 3].map(i => <div key={i} className="h-48 bg-white/5 rounded-3xl"></div>)}
+                    </div>
                 </div>
             </div>
-        )
+        );
     }
 
     return (
-        <div className="space-y-10 relative">
-            {/* Welcome Header & Action */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div>
-                    <h1 className="text-3xl font-bold font-outfit text-white">
-                        Dashboard
-                    </h1>
-                    <p className="text-slate-400 mt-1">
-                        Track your progress and master new algorithms.
-                    </p>
-                </div>
-
-                {/* SMART START BUTTON - REDIRECT TO HQ */}
-                <button
-                    onClick={() => router.push("/navigator")}
-                    className={`
-                        group relative overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-indigo-500/25
-                    `}
-                >
-                    <div className="absolute inset-0 bg-white/20 group-hover:translate-x-full transition-transform duration-500 skew-x-12 -translate-x-full" />
-                    <div className="flex items-center gap-2 font-semibold text-white">
-                        <Zap className="fill-white" size={20} />
-                        <span>Open Navigator HQ</span>
+        <div className="flex-1 overflow-y-auto custom-scrollbar focus-mode-wrapper">
+            <div className="max-w-6xl mx-auto space-y-10">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
+                    <div>
+                        <h2 className="text-4xl font-bold tracking-tight mb-2 text-white">Dashboard</h2>
+                        <p className="text-slate-400 text-lg">Track your progress and master new algorithms.</p>
                     </div>
-                </button>
-            </div>
-
-            {/* Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard
-                    label="Total XP"
-                    value={currentXP}
-                    icon={Zap}
-                    color="amber"
-                />
-                <StatCard
-                    label="Current Rank"
-                    value={`Lvl ${currentLevel}`}
-                    icon={Trophy}
-                    color="purple"
-                />
-                <StatCard
-                    label="Questions Solved"
-                    value={solvedCount}
-                    icon={Target}
-                    color="emerald"
-                />
-            </div>
-
-            {/* Course Map - Grouped by Levels */}
-            <div className="space-y-12">
-                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                    <Activity size={20} className="text-blue-400" />
-                    <h2 className="text-xl font-bold text-white">Learning Path</h2>
+                    <button
+                        onClick={() => router.push("/navigator")}
+                        className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 shadow-lg shadow-blue-500/20 px-8 h-14 font-bold text-white group relative overflow-hidden transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+                    >
+                        <span className="relative z-10 flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 fill-white" />
+                            Open Navigator HQ
+                        </span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                    </button>
                 </div>
 
-                {LEVELS.map((level) => {
-                    // Filter topics for this level
-                    const levelTopics = TOPICS.filter(t => t.level === level.id);
+                {/* Stats Row */}
+                <div className="flex flex-wrap gap-6">
+                    <StatCard icon={Zap} label="Total XP" value={currentXP} color="oklch(0.7 0.2 80)" />
+                    <StatCard icon={Trophy} label="Current Rank" value={`Lvl ${currentLevel}`} color="oklch(0.7 0.2 300)" />
+                    <StatCard icon={Target} label="Questions Solved" value={solvedCount} color="oklch(0.7 0.2 160)" />
+                </div>
 
-                    return (
-                        <div key={level.id} className="space-y-5">
-                            <div className="flex items-center gap-2">
-                                <div className="h-6 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full"></div>
-                                <h3 className="text-lg font-bold text-slate-200">{level.title}</h3>
-                            </div>
+                {/* Learning Path */}
+                <div className="space-y-12">
+                    {LEVELS.map((level) => {
+                        const levelTopics = TOPICS.filter(t => t.level === level.id);
+                        const levelColorClass =
+                            level.id === 1 ? 'bg-blue-500' :
+                                level.id === 2 ? 'bg-cyan-500' :
+                                    level.id === 3 ? 'bg-indigo-500' :
+                                        level.id === 4 ? 'bg-violet-500' :
+                                            'bg-fuchsia-500';
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {levelTopics.map((topic) => (
-                                    <TopicCard
-                                        key={topic.id}
-                                        {...topic}
-                                        solved={getSolvedForTopic(topic.id)}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )
-                })}
+                        return (
+                            <section key={level.id} className="space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <div className={`h-6 w-1 rounded-full ${levelColorClass}`} />
+                                    <h3 className="text-xl font-bold text-white">{level.title}</h3>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {levelTopics.map((topic) => {
+                                        const solved = getSolvedForTopic(topic.id);
+                                        const total = 10; // Hardcoded goal per topic for visual progress
+                                        return (
+                                            <LearningPathCard
+                                                key={topic.id}
+                                                icon={topic.icon}
+                                                title={topic.title}
+                                                description={topic.description}
+                                                progress={solved}
+                                                total={total}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </section>
+                        );
+                    })}
+                </div>
             </div>
-
-            {/* Dev Tool: Seed Database Button */}
-            {/* TODO: Remove this in production */}
-
         </div>
     );
 }

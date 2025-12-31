@@ -10,6 +10,22 @@ import { ALL_QUESTIONS, getQuestionsByTopicId, TOPIC_ID_TO_CATEGORY } from "@/li
 import { Question } from "@/types/question";
 import { Zap, Trophy, BrainCircuit, Activity, ChevronRight, CheckCircle2, AlertCircle, TrendingUp, ChevronLeft, ChevronRight as ChevronNext } from "lucide-react";
 
+const formatSmartDate = (isoString?: string) => {
+    if (!isoString) return "-";
+    const date = new Date(isoString);
+    const now = new Date();
+    const isToday = date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+
+    // Check Yesterday
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday = date.getDate() === yesterday.getDate() && date.getMonth() === yesterday.getMonth() && date.getFullYear() === yesterday.getFullYear();
+
+    if (isToday) return "Today";
+    if (isYesterday) return "Yesterday";
+    return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+};
+
 export default function NavigatorPage() {
     const { user } = useAuth();
     const router = useRouter();
@@ -23,11 +39,28 @@ export default function NavigatorPage() {
     const ITEMS_PER_PAGE = 10;
 
     // --- NAVIGATION LOGIC ---
+    // --- NAVIGATION LOGIC ---
     const handleSmartStart = async () => {
-        if (!user) return;
+        if (!user || !userData) return;
         setNavLoading(true);
 
+        const currentSolved = new Set(userData.solvedQuestionIds || []);
+        const CACHE_KEY = `navigator_rec_${user.uid}`;
+
         try {
+            // 1. Check Cache
+            const cachedParams = localStorage.getItem(CACHE_KEY);
+            if (cachedParams) {
+                const decision = JSON.parse(cachedParams);
+                // If we have a recommendation AND the user hasn't solved it yet -> Use it!
+                if (decision.questionId && !currentSolved.has(decision.questionId)) {
+                    console.log("🧭 Using Cached Recommendation:", decision.questionId);
+                    router.push(`/practice/${decision.questionId}`);
+                    return; // Exit early
+                }
+            }
+
+            // 2. Fetch Fresh (Cache Miss or Expired/Solved)
             const res = await fetch("/api/navigator", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -46,12 +79,8 @@ export default function NavigatorPage() {
                 return;
             }
 
-            // NEW: For new page, we handle concept alert differently? 
-            // Or just reuse the redirect and let the practice page handle it?
-            // Actually, the practice page logic for modals was in Dashboard.
-            // Let's just simple redirect for now, potentially the practice page itself should show the "New Concept" modal?
-            // Or we use a query param `?isNewConcept=true&brief=...`
-            // Let's stick to direct redirect for simplicity in MVP 2.0
+            // 3. Update Cache & Redirect
+            localStorage.setItem(CACHE_KEY, JSON.stringify(decision));
             router.push(`/practice/${decision.questionId}`);
 
         } catch (error) {
@@ -283,13 +312,14 @@ export default function NavigatorPage() {
                                     <th className="p-4 pl-6 font-medium">Problem</th>
                                     <th className="p-4 font-medium">Difficulty</th>
                                     <th className="p-4 font-medium">Category</th>
+                                    <th className="p-4 font-medium">Date</th>
                                     <th className="p-4 font-medium text-right pr-6">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
                                 {visibleHistory.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="p-8 text-center text-slate-500 italic">No questions solved yet. Start your journey!</td>
+                                        <td colSpan={5} className="p-8 text-center text-slate-500 italic">No questions solved yet. Start your journey!</td>
                                     </tr>
                                 ) : (
                                     visibleHistory.map(q => (
@@ -305,6 +335,9 @@ export default function NavigatorPage() {
                                                 </span>
                                             </td>
                                             <td className="p-4 text-slate-400 text-sm">{q.category}</td>
+                                            <td className="p-4 text-slate-400 text-sm font-mono">
+                                                {formatSmartDate(userData?.solvedAt?.[q.id])}
+                                            </td>
                                             <td className="p-4 text-right pr-6">
                                                 <button
                                                     onClick={() => router.push(`/practice/${q.id}`)}

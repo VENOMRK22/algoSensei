@@ -34,8 +34,11 @@ export const updateUserProgress = async (uid: string, questionId: string, xpResu
     }
 
     // First time solving: Award XP
+    const timestamp = new Date().toISOString();
+
     await updateDoc(userRef, {
         solvedQuestionIds: arrayUnion(questionId),
-        xp: increment(xpResult)
+        xp: increment(xpResult),
+        [`solvedAt.${questionId}`]: timestamp
     });
 };
