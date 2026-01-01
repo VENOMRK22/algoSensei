@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import InfiniteGrid from "@/components/ui/infinite-grid-integration";
 
 export default function Home() {
-  redirect("/dashboard");
+  return <InfiniteGrid />;
 }

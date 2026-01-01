@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { Editor } from "@monaco-editor/react";
 import { ArrowRightLeft, Sparkles, Copy, Check, MessageSquare } from "lucide-react";
+import { motion } from "framer-motion";
+import { TechGridBackground } from "@/components/ui/tech-grid-background";
 
-
-// Simple toggle component if shadcn switch is missing
+// Simple toggle component
 const SimpleSwitch = ({ checked, onCheckedChange }: { checked: boolean, onCheckedChange: (c: boolean) => void }) => (
     <button
         onClick={() => onCheckedChange(!checked)}
-        className={`w-11 h-6 rounded-full transition-colors relative ${checked ? 'bg-indigo-600' : 'bg-slate-700'}`}
+        className={`w-11 h-6 rounded-full transition-colors relative ${checked ? 'bg-primary' : 'bg-muted'}`}
     >
         <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${checked ? 'left-6' : 'left-1'}`} />
     </button>
@@ -49,7 +50,7 @@ export default function TranslatorPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     sourceCode,
-                    sourceLang: sourceLang === 'auto' ? null : sourceLang, // Send null if auto
+                    sourceLang: sourceLang === 'auto' ? null : sourceLang,
                     targetLang,
                     includeComments
                 })
@@ -76,23 +77,32 @@ export default function TranslatorPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white flex flex-col font-outfit">
+        <div className="min-h-screen bg-background text-foreground flex flex-col font-mono relative overflow-hidden">
+            <TechGridBackground />
 
             {/* Header / Config Bar */}
-            <div className="h-20 border-b border-white/10 bg-slate-900/50 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-20">
-                <div className="flex items-center gap-2">
-                    <div className="p-2 bg-indigo-500/20 rounded-lg">
-                        <ArrowRightLeft className="text-indigo-400" size={20} />
+            <motion.div 
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.5 }}
+                className="h-20 border-b border-white/5 bg-background/50 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-20"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 border border-primary/20 rounded-lg">
+                        <ArrowRightLeft className="text-primary" size={20} />
                     </div>
-                    <h1 className="text-xl font-bold tracking-tight">Code Translator</h1>
+                    <div>
+                        <h1 className="text-xl font-bold tracking-tight uppercase">Code Translator</h1>
+                        <p className="text-xs text-muted-foreground tracking-widest uppercase">AI-Powered Syntax Conversion</p>
+                    </div>
                 </div>
 
                 {/* Controls */}
                 <div className="flex items-center gap-6">
 
-                    <div className="flex items-center gap-3 bg-slate-800/50 py-2 px-4 rounded-full border border-white/5">
-                        <MessageSquare size={16} className={includeComments ? "text-indigo-400" : "text-slate-400"} />
-                        <span className="text-sm font-medium text-slate-300">Explain Changes</span>
+                    <div className="flex items-center gap-3 bg-muted/20 py-2 px-4 rounded-full border border-white/5">
+                        <MessageSquare size={16} className={includeComments ? "text-primary" : "text-muted-foreground"} />
+                        <span className="text-sm font-medium text-muted-foreground">Explain Changes</span>
                         <SimpleSwitch checked={includeComments} onCheckedChange={setIncludeComments} />
                     </div>
 
@@ -100,10 +110,10 @@ export default function TranslatorPage() {
                         onClick={handleTranslate}
                         disabled={isLoading}
                         className={`
-                            flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all
+                            flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all uppercase tracking-wider text-sm
                             ${isLoading
-                                ? 'bg-slate-800 text-slate-500 cursor-wait'
-                                : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:scale-105 shadow-lg shadow-indigo-500/20 text-white'
+                                ? 'bg-muted text-muted-foreground cursor-wait'
+                                : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_20px_var(--primary)] hover:shadow-[0_0_30px_var(--primary)]'
                             }
                         `}
                     >
@@ -111,73 +121,89 @@ export default function TranslatorPage() {
                             <>Converting...</>
                         ) : (
                             <>
-                                <Sparkles size={18} className="fill-white" />
+                                <Sparkles size={16} className="fill-current" />
                                 Translate Code
                             </>
                         )}
                     </button>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Main Content: Split View */}
-            <div className="flex-1 flex flex-col md:flex-row h-[calc(100vh-80px)] overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row h-[calc(100vh-80px)] overflow-hidden relative z-10">
 
                 {/* LEFT: SOURCE */}
-                <div className="flex-1 flex flex-col border-r border-white/10 bg-[#1e1e1e]">
-                    <div className="h-12 flex items-center justify-between px-4 bg-[#252526] border-b border-white/5">
-                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Source (Auto-Detect)</span>
+                <motion.div 
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    className="flex-1 flex flex-col border-r border-white/5 bg-black/20 backdrop-blur-sm"
+                >
+                    <div className="h-12 flex items-center justify-between px-4 bg-white/5 border-b border-white/5">
+                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Source (Auto-Detect)</span>
                         <select
                             value={sourceLang}
                             onChange={(e) => setSourceLang(e.target.value)}
-                            className="bg-slate-800 border border-white/10 text-xs text-white rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none"
+                            className="bg-black/40 border border-white/10 text-xs text-muted-foreground rounded px-2 py-1 focus:ring-1 focus:ring-primary outline-none uppercase font-mono"
                         >
                             {SOURCE_LANGUAGES.map(lang => (
-                                <option key={lang.id} value={lang.id} className="bg-slate-900 text-white">{lang.label}</option>
+                                <option key={lang.id} value={lang.id} className="bg-background text-foreground">{lang.label}</option>
                             ))}
                         </select>
                     </div>
                     <div className="flex-1 relative">
                         <Editor
                             height="100%"
-                            language={sourceLang === 'auto' ? undefined : sourceLang} // Undefined allows Monaco to guess or default
+                            language={sourceLang === 'auto' ? undefined : sourceLang} 
                             theme="vs-dark"
                             value={sourceCode}
                             onChange={(val) => setSourceCode(val || "")}
                             options={{
                                 minimap: { enabled: false },
-                                fontSize: 14,
+                                fontSize: 13,
+                                fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
                                 padding: { top: 20 },
                                 scrollBeyondLastLine: false,
+                                renderLineHighlight: "none",
+                                autoIndent: "full",
+                                contextmenu: true, 
                             }}
+                            className="bg-transparent"
                         />
                     </div>
-                </div>
+                </motion.div>
 
                 {/* RIGHT: TARGET */}
-                <div className="flex-1 flex flex-col bg-[#1e1e1e]">
-                    <div className="h-12 flex items-center justify-between px-4 bg-[#252526] border-b border-white/5">
+                <motion.div 
+                    initial={{ x: 20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                    className="flex-1 flex flex-col bg-black/20 backdrop-blur-sm"
+                >
+                    <div className="h-12 flex items-center justify-between px-4 bg-primary/5 border-b border-primary/10">
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Translated Output</span>
+                            <span className="text-xs font-bold text-primary uppercase tracking-widest">Translated Output</span>
+                            {targetCode && <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse"/>}
                         </div>
 
                         <div className="flex items-center gap-3">
                             <select
                                 value={targetLang}
                                 onChange={(e) => setTargetLang(e.target.value)}
-                                className="bg-indigo-600/20 border border-indigo-500/30 text-xs text-indigo-200 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none font-medium"
+                                className="bg-primary/10 border border-primary/20 text-xs text-primary rounded px-2 py-1 focus:ring-1 focus:ring-primary outline-none font-bold uppercase font-mono"
                             >
                                 {TARGET_LANGUAGES.map(lang => (
-                                    <option key={lang.id} value={lang.id} className="bg-slate-900 text-white">{lang.label}</option>
+                                    <option key={lang.id} value={lang.id} className="bg-background text-foreground">{lang.label}</option>
                                 ))}
                             </select>
 
                             {targetCode && (
                                 <button
                                     onClick={copyToClipboard}
-                                    className="p-1.5 hover:bg-white/10 rounded transition-colors text-slate-400 hover:text-white"
+                                    className="p-1.5 hover:bg-white/10 rounded transition-colors text-muted-foreground hover:text-white"
                                     title="Copy Source"
                                 >
-                                    {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+                                    {copied ? <Check size={16} className="text-primary" /> : <Copy size={16} />}
                                 </button>
                             )}
                         </div>
@@ -186,29 +212,33 @@ export default function TranslatorPage() {
                         <div className="absolute inset-0">
                             <Editor
                                 height="100%"
-                                language={targetLang} // Dynamic Language Highlighting
+                                language={targetLang}
                                 theme="vs-dark"
                                 value={targetCode}
                                 options={{
                                     minimap: { enabled: false },
-                                    fontSize: 14,
+                                    fontSize: 13,
+                                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
                                     padding: { top: 20 },
                                     scrollBeyondLastLine: false,
-                                    readOnly: true // Result is read-only
+                                    readOnly: true,
+                                    renderLineHighlight: "none"
                                 }}
                             />
                         </div>
                         {/* Empty State Overlay */}
                         {!targetCode && !isLoading && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="text-center space-y-2 opacity-30">
-                                    <ArrowRightLeft size={48} className="mx-auto" />
-                                    <p className="text-lg font-medium">Ready to Translate</p>
+                                <div className="text-center space-y-4 opacity-20">
+                                    <div className="w-20 h-20 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center mx-auto">
+                                        <ArrowRightLeft size={32} />
+                                    </div>
+                                    <p className="text-sm font-mono uppercase tracking-widest">Awaiting Input Stream...</p>
                                 </div>
                             </div>
                         )}
                     </div>
-                </div>
+                </motion.div>
 
             </div>
         </div>
