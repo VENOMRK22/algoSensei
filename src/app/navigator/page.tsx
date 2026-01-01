@@ -9,6 +9,8 @@ import { TOPICS } from "@/lib/topics";
 import { ALL_QUESTIONS, getQuestionsByTopicId, TOPIC_ID_TO_CATEGORY } from "@/lib/allQuestions";
 import { Question } from "@/types/question";
 import { Zap, Trophy, BrainCircuit, Activity, ChevronRight, CheckCircle2, AlertCircle, TrendingUp, ChevronLeft, ChevronRight as ChevronNext } from "lucide-react";
+import { TechGridBackground } from "@/components/ui/tech-grid-background";
+import { motion } from "framer-motion";
 
 const formatSmartDate = (isoString?: string) => {
     if (!isoString) return "-";
@@ -156,227 +158,254 @@ export default function NavigatorPage() {
     const visibleHistory = solvedQuestionsList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
 
+    // --- ANIMATION VARIANTS ---
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0 }
+    };
+
     return (
-        <div className="min-h-screen bg-slate-950 text-white p-6 md:p-12 font-outfit">
-            <div className="max-w-7xl mx-auto space-y-12">
+        <div className="relative min-h-screen text-foreground font-sans overflow-hidden">
+             {/* Background */}
+            <div className="fixed inset-0 z-0 pointer-events-none">
+                <TechGridBackground />
+            </div>
 
-                {/* 1. HEADER & HERO ACTION */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-indigo-500/20 rounded-lg">
-                                <BrainCircuit className="text-indigo-400" size={24} />
-                            </div>
-                            <h1 className="text-3xl font-bold tracking-tight">Smart Navigator HQ</h1>
-                        </div>
-                        <p className="text-slate-400 max-w-xl">
-                            Your personalized command center. The AI tracks your progress and adapts the curriculum to your exact skill gap.
-                        </p>
-                    </div>
-
-                    <button
-                        onClick={handleSmartStart}
-                        disabled={navLoading}
-                        className={`
-                            group relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-6 transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(99,102,241,0.5)] active:scale-95
-                            ${navLoading ? 'opacity-80 cursor-wait' : 'shadow-2xl shadow-indigo-500/30'}
-                        `}
-                    >
-                        <div className="absolute inset-0 bg-white/20 group-hover:translate-x-full transition-transform duration-700 skew-x-12 -translate-x-full" />
-                        <div className="flex items-center gap-4">
-                            <div className="relative">
-                                {navLoading ? (
-                                    <Activity className="animate-spin text-white" size={32} />
-                                ) : (
-                                    <>
-                                        <Zap className="fill-white text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-ping opacity-30" size={40} />
-                                        <Zap className="fill-white text-white relative z-10" size={32} />
-                                    </>
-                                )}
-                            </div>
-                            <div className="text-left">
-                                <div className="text-xs font-medium text-indigo-100 uppercase tracking-wider">Ready to Train?</div>
-                                <div className="text-2xl font-bold text-white">{navLoading ? "Analyzing..." : "Start Adaptive Session"}</div>
-                            </div>
-                            <ChevronRight className="text-indigo-200 group-hover:translate-x-1 transition-transform" size={24} />
-                        </div>
-                    </button>
-                </div>
-
-                {/* 2. KEY STATS */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="bg-slate-900/50 border border-white/5 p-6 rounded-2xl flex items-center gap-4">
-                        <div className="p-3 bg-emerald-500/10 rounded-xl">
-                            <CheckCircle2 className="text-emerald-400" size={24} />
-                        </div>
+            <div className="relative z-10 max-w-7xl mx-auto p-6 md:p-12 space-y-12">
+                
+                <motion.div 
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="space-y-12"
+                >
+                    {/* 1. HEADER & HERO ACTION */}
+                    <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-8">
                         <div>
-                            <div className="text-3xl font-bold text-white">{solvedCount}</div>
-                            <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Solved</div>
-                        </div>
-                    </div>
-
-                    <div className="bg-slate-900/50 border border-white/5 p-6 rounded-2xl flex items-center gap-4">
-                        <div className="p-3 bg-amber-500/10 rounded-xl">
-                            <Trophy className="text-amber-400" size={24} />
-                        </div>
-                        <div>
-                            <div className={`text-2xl font-bold ${levelColor}`}>{levelTitle}</div>
-                            <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Current Rank</div>
-                        </div>
-                    </div>
-
-                    <div className="bg-slate-900/50 border border-white/5 p-6 rounded-2xl flex items-center gap-4">
-                        <div className="p-3 bg-blue-500/10 rounded-xl">
-                            <TrendingUp className="text-blue-400" size={24} />
-                        </div>
-                        <div>
-                            <div className="text-2xl font-bold text-white">{skillMatrix.strong.length}</div>
-                            <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Strong Topics</div>
-                        </div>
-                    </div>
-
-                    <div className="bg-slate-900/50 border border-white/5 p-6 rounded-2xl flex items-center gap-4">
-                        <div className="p-3 bg-rose-500/10 rounded-xl">
-                            <AlertCircle className="text-rose-400" size={24} />
-                        </div>
-                        <div>
-                            <div className="text-2xl font-bold text-white">{skillMatrix.weak.length}</div>
-                            <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Topics to Improve</div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 3. SKILL MATRIX */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Strong Column */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-wider text-sm">
-                            <div className="w-2 h-2 rounded-full bg-emerald-400" /> Strong Areas
-                        </div>
-                        <div className="bg-slate-900/40 border border-emerald-500/20 rounded-2xl p-4 min-h-[200px] space-y-2">
-                            {skillMatrix.strong.length === 0 && <div className="text-slate-500 text-sm italic">Keep practicing to build mastery!</div>}
-                            {skillMatrix.strong.map(t => (
-                                <div key={t.id} className="flex items-center gap-3 bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/10">
-                                    <t.icon className="text-emerald-400" size={16} />
-                                    <span className="text-emerald-100 text-sm font-medium">{t.title}</span>
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
+                                    <BrainCircuit className="text-primary" size={24} />
                                 </div>
-                            ))}
+                                <h1 className="text-3xl font-bold tracking-tighter uppercase font-mono">Smart Navigator HQ</h1>
+                            </div>
+                            <p className="text-muted-foreground max-w-xl text-lg">
+                                Your personalized command center. The AI tracks your progress and adapts the curriculum to your exact skill gap.
+                            </p>
                         </div>
-                    </div>
 
-                    {/* Mid Column */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-blue-400 font-bold uppercase tracking-wider text-sm">
-                            <div className="w-2 h-2 rounded-full bg-blue-400" /> Developing
-                        </div>
-                        <div className="bg-slate-900/40 border border-blue-500/20 rounded-2xl p-4 min-h-[200px] space-y-2">
-                            {skillMatrix.mid.length === 0 && <div className="text-slate-500 text-sm italic">Start solving new topics!</div>}
-                            {skillMatrix.mid.map(t => (
-                                <div key={t.id} className="flex items-center gap-3 bg-blue-500/10 p-2 rounded-lg border border-blue-500/10">
-                                    <t.icon className="text-blue-400" size={16} />
-                                    <span className="text-blue-100 text-sm font-medium">{t.title}</span>
+                        <button
+                            onClick={handleSmartStart}
+                            disabled={navLoading}
+                            className={`
+                                group relative overflow-hidden rounded-xl bg-primary text-primary-foreground px-8 py-6 transition-all hover:scale-105 hover:shadow-[0_0_40px_var(--primary)] active:scale-95 border border-primary/50
+                                ${navLoading ? 'opacity-80 cursor-wait' : 'shadow-2xl shadow-primary/20'}
+                            `}
+                        >
+                            <div className="absolute inset-0 bg-white/20 group-hover:translate-x-full transition-transform duration-700 skew-x-12 -translate-x-full" />
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    {navLoading ? (
+                                        <Activity className="animate-spin text-primary-foreground" size={32} />
+                                    ) : (
+                                        <>
+                                            <Zap className="fill-current text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-ping opacity-30" size={40} />
+                                            <Zap className="fill-current text-primary-foreground relative z-10" size={32} />
+                                        </>
+                                    )}
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Weak Column */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-slate-400 font-bold uppercase tracking-wider text-sm">
-                            <div className="w-2 h-2 rounded-full bg-slate-600" /> Not Started / Weak
-                        </div>
-                        <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-4 min-h-[200px] space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
-                            {skillMatrix.weak.map(t => (
-                                <div key={t.id} className="flex items-center gap-3 hover:bg-white/5 p-2 rounded-lg transition-colors opacity-60 hover:opacity-100">
-                                    <t.icon className="text-slate-400" size={16} />
-                                    <span className="text-slate-300 text-sm font-medium">{t.title}</span>
+                                <div className="text-left">
+                                    <div className="text-xs font-medium text-primary-foreground/80 uppercase tracking-wider font-mono">Ready to Train?</div>
+                                    <div className="text-2xl font-bold text-primary-foreground uppercase tracking-tight">{navLoading ? "Analyzing..." : "Start Adaptive Session"}</div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+                                <ChevronRight className="text-primary-foreground/80 group-hover:translate-x-1 transition-transform" size={24} />
+                            </div>
+                        </button>
+                    </motion.div>
 
-                {/* 4. HISTORY TABLE (Paginated) */}
-                <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-bold text-white">Solved History</h2>
-                        <div className="text-sm text-slate-400">
-                            Showing {visibleHistory.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0} - {Math.min(currentPage * ITEMS_PER_PAGE, solvedQuestionsList.length)} of {solvedQuestionsList.length}
+                    {/* 2. KEY STATS */}
+                    <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="glass-panel p-6 rounded-xl flex items-center gap-4 border-l-4 border-l-emerald-500">
+                            <div className="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                                <CheckCircle2 className="text-emerald-400" size={24} />
+                            </div>
+                            <div>
+                                <div className="text-3xl font-bold font-mono">{solvedCount}</div>
+                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total Solved</div>
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="bg-slate-900 rounded-2xl border border-white/5 overflow-hidden">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-950/50 border-b border-white/5 text-xs uppercase tracking-wider text-slate-400">
-                                    <th className="p-4 pl-6 font-medium">Problem</th>
-                                    <th className="p-4 font-medium">Difficulty</th>
-                                    <th className="p-4 font-medium">Category</th>
-                                    <th className="p-4 font-medium">Date</th>
-                                    <th className="p-4 font-medium text-right pr-6">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5">
-                                {visibleHistory.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={5} className="p-8 text-center text-slate-500 italic">No questions solved yet. Start your journey!</td>
+                        <div className="glass-panel p-6 rounded-xl flex items-center gap-4 border-l-4 border-l-amber-500">
+                            <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                                <Trophy className="text-amber-400" size={24} />
+                            </div>
+                            <div>
+                                <div className={`text-2xl font-bold font-mono ${levelColor}`}>{levelTitle}</div>
+                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Current Rank</div>
+                            </div>
+                        </div>
+
+                        <div className="glass-panel p-6 rounded-xl flex items-center gap-4 border-l-4 border-l-blue-500">
+                            <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                                <TrendingUp className="text-blue-400" size={24} />
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold font-mono">{skillMatrix.strong.length}</div>
+                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Strong Topics</div>
+                            </div>
+                        </div>
+
+                        <div className="glass-panel p-6 rounded-xl flex items-center gap-4 border-l-4 border-l-rose-500">
+                            <div className="p-3 bg-rose-500/10 rounded-lg border border-rose-500/20">
+                                <AlertCircle className="text-rose-400" size={24} />
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold font-mono">{skillMatrix.weak.length}</div>
+                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Topics to Improve</div>
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* 3. SKILL MATRIX */}
+                    <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* Strong Column */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-wider text-sm font-mono">
+                                <div className="w-2 h-2 rounded-full bg-emerald-400" /> Strong Areas
+                            </div>
+                            <div className="bg-card/30 border border-emerald-500/20 rounded-xl p-4 min-h-[200px] space-y-2 backdrop-blur-sm">
+                                {skillMatrix.strong.length === 0 && <div className="text-muted-foreground text-sm italic">Keep practicing to build mastery!</div>}
+                                {skillMatrix.strong.map(t => (
+                                    <div key={t.id} className="flex items-center gap-3 bg-emerald-500/5 p-2 rounded-lg border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors">
+                                        <t.icon className="text-emerald-400" size={16} />
+                                        <span className="text-emerald-100 text-sm font-medium">{t.title}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Mid Column */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-blue-400 font-bold uppercase tracking-wider text-sm font-mono">
+                                <div className="w-2 h-2 rounded-full bg-blue-400" /> Developing
+                            </div>
+                            <div className="bg-card/30 border border-blue-500/20 rounded-xl p-4 min-h-[200px] space-y-2 backdrop-blur-sm">
+                                {skillMatrix.mid.length === 0 && <div className="text-muted-foreground text-sm italic">Start solving new topics!</div>}
+                                {skillMatrix.mid.map(t => (
+                                    <div key={t.id} className="flex items-center gap-3 bg-blue-500/5 p-2 rounded-lg border border-blue-500/10 hover:bg-blue-500/10 transition-colors">
+                                        <t.icon className="text-blue-400" size={16} />
+                                        <span className="text-blue-100 text-sm font-medium">{t.title}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Weak Column */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-muted-foreground font-bold uppercase tracking-wider text-sm font-mono">
+                                <div className="w-2 h-2 rounded-full bg-muted-foreground" /> Not Started / Weak
+                            </div>
+                            <div className="bg-card/30 border border-white/5 rounded-xl p-4 min-h-[200px] space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar backdrop-blur-sm">
+                                {skillMatrix.weak.map(t => (
+                                    <div key={t.id} className="flex items-center gap-3 hover:bg-white/5 p-2 rounded-lg transition-colors opacity-60 hover:opacity-100 group">
+                                        <t.icon className="text-muted-foreground group-hover:text-foreground transition-colors" size={16} />
+                                        <span className="text-muted-foreground group-hover:text-foreground text-sm font-medium transition-colors">{t.title}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* 4. HISTORY TABLE (Paginated) */}
+                    <motion.div variants={itemVariants} className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-bold font-mono uppercase tracking-wide">Solved History</h2>
+                            <div className="text-sm text-muted-foreground font-mono">
+                                Showing {visibleHistory.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0} - {Math.min(currentPage * ITEMS_PER_PAGE, solvedQuestionsList.length)} of {solvedQuestionsList.length}
+                            </div>
+                        </div>
+
+                        <div className="bg-card/40 rounded-xl border border-white/5 overflow-hidden backdrop-blur-md">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-white/5 border-b border-white/5 text-xs uppercase tracking-wider text-muted-foreground font-mono">
+                                        <th className="p-4 pl-6 font-medium">Problem</th>
+                                        <th className="p-4 font-medium">Difficulty</th>
+                                        <th className="p-4 font-medium">Category</th>
+                                        <th className="p-4 font-medium">Date</th>
+                                        <th className="p-4 font-medium text-right pr-6">Action</th>
                                     </tr>
-                                ) : (
-                                    visibleHistory.map(q => (
-                                        <tr key={q.id} className="hover:bg-white/5 transition-colors group">
-                                            <td className="p-4 pl-6 text-white font-medium">{q.title}</td>
-                                            <td className="p-4">
-                                                <span className={`
-                                                    px-2 py-0.5 rounded text-xs font-semibold
-                                                    ${q.difficulty === 'Easy' ? 'bg-emerald-500/20 text-emerald-400' :
-                                                        q.difficulty === 'Medium' ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'}
-                                                `}>
-                                                    {q.difficulty}
-                                                </span>
-                                            </td>
-                                            <td className="p-4 text-slate-400 text-sm">{q.category}</td>
-                                            <td className="p-4 text-slate-400 text-sm font-mono">
-                                                {formatSmartDate(userData?.solvedAt?.[q.id])}
-                                            </td>
-                                            <td className="p-4 text-right pr-6">
-                                                <button
-                                                    onClick={() => router.push(`/practice/${q.id}`)}
-                                                    className="text-indigo-400 hover:text-indigo-300 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    Review
-                                                </button>
-                                            </td>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {visibleHistory.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="p-8 text-center text-muted-foreground italic">No questions solved yet. Start your journey!</td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Pagination Controls */}
-                    {totalHistoryPages > 1 && (
-                        <div className="flex justify-center gap-4 mt-6">
-                            <button
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                className="p-2 rounded-lg border border-white/10 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
-                            >
-                                <ChevronLeft size={20} />
-                            </button>
-                            <span className="flex items-center px-4 font-mono text-slate-400">
-                                Page {currentPage} of {totalHistoryPages}
-                            </span>
-                            <button
-                                onClick={() => setCurrentPage(p => Math.min(totalHistoryPages, p + 1))}
-                                disabled={currentPage === totalHistoryPages}
-                                className="p-2 rounded-lg border border-white/10 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
-                            >
-                                <ChevronNext size={20} />
-                            </button>
+                                    ) : (
+                                        visibleHistory.map(q => (
+                                            <tr key={q.id} className="hover:bg-white/5 transition-colors group">
+                                                <td className="p-4 pl-6 font-medium text-foreground">{q.title}</td>
+                                                <td className="p-4">
+                                                    <span className={`
+                                                        px-2 py-0.5 rounded text-xs font-semibold font-mono
+                                                        ${q.difficulty === 'Easy' ? 'bg-emerald-500/20 text-emerald-400' :
+                                                            q.difficulty === 'Medium' ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'}
+                                                    `}>
+                                                        {q.difficulty}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 text-muted-foreground text-sm">{q.category}</td>
+                                                <td className="p-4 text-muted-foreground text-sm font-mono">
+                                                    {formatSmartDate(userData?.solvedAt?.[q.id])}
+                                                </td>
+                                                <td className="p-4 text-right pr-6">
+                                                    <button
+                                                        onClick={() => router.push(`/practice/${q.id}`)}
+                                                        className="text-primary hover:text-primary/80 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity font-mono uppercase tracking-wider"
+                                                    >
+                                                        Review
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
-                    )}
-                </div>
 
+                        {/* Pagination Controls */}
+                        {totalHistoryPages > 1 && (
+                            <div className="flex justify-center gap-4 mt-6">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="p-2 rounded-lg border border-white/10 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-primary"
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
+                                <span className="flex items-center px-4 font-mono text-muted-foreground">
+                                    Page {currentPage} of {totalHistoryPages}
+                                </span>
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalHistoryPages, p + 1))}
+                                    disabled={currentPage === totalHistoryPages}
+                                    className="p-2 rounded-lg border border-white/10 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-primary"
+                                >
+                                    <ChevronNext size={20} />
+                                </button>
+                            </div>
+                        )}
+                    </motion.div>
+                </motion.div>
             </div>
         </div>
     );
