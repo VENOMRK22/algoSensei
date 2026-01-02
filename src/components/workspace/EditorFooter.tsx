@@ -10,6 +10,8 @@ import { Question, TestCase } from "@/types/question"; // Ensure TestCase type e
 interface EditorFooterProps {
     code: string;
     language: string;
+    difficulty: string;
+    questionTitle: string;
     testCases?: TestCase[]; // Make optional or required based on usage
     onRun?: () => void;
     onSubmit: () => void;
@@ -20,7 +22,7 @@ interface EditorFooterProps {
     onSuccess?: () => void;
 }
 
-export default function EditorFooter({ code, language, testCases, onSubmit, onAiToggle, isAiOpen, onRunComplete, onHint, onSuccess }: EditorFooterProps) {
+export default function EditorFooter({ code, language, difficulty, questionTitle, testCases, onSubmit, onAiToggle, isAiOpen, onRunComplete, onHint, onSuccess }: EditorFooterProps) {
     const { user } = useAuth();
     const params = useParams();
     const currentQuestionId = params?.questionId as string;
@@ -128,22 +130,63 @@ export default function EditorFooter({ code, language, testCases, onSubmit, onAi
 
                 if (data.run) {
                     const actualRaw = data.run.stdout.trim();
-                    // Normalize: Remove whitespace AND quotes to handle Type Mismatches (e.g. "1" vs 1)
-                    // This allows ["1", "2"] to match [1, 2]
-                    const normalizeStrict = (str: string) => str.replace(/[\s"']/g, "");
+                    const expectedRaw = expected.trim();
 
-                    const actualNorm = normalizeStrict(actualRaw);
-                    const expectedNorm = normalizeStrict(expected);
+                    // Robust Comparison Logic
+                    // Robust Comparison Logic (Enhanced for Order-Independence)
+                    const checkOutputMatch = (act: string, exp: string): boolean => {
+                        const tryParse = (s: string) => {
+                            try { return JSON.parse(s); } catch (e) { return null; }
+                        };
 
-                    if (actualNorm === expectedNorm) {
+                        const canonicalize = (obj: any): any => {
+                            if (Array.isArray(obj)) {
+                                // Recursively canonicalize elements, then sort string representations
+                                return obj.map(canonicalize).sort((a, b) => {
+                                    return JSON.stringify(a).localeCompare(JSON.stringify(b));
+                                });
+                            }
+                            // Primitives (number, string, boolean) returned as is
+                            return obj;
+                        };
+
+                        const parsedAct = tryParse(act);
+                        const parsedExp = tryParse(exp);
+
+                        // 1. JSON Structural Match (Bag Equality)
+                        if (parsedAct !== null && parsedExp !== null) {
+                            // If arrays/objects, use canonical sort comparison
+                            const canonAct = JSON.stringify(canonicalize(parsedAct));
+                            const canonExp = JSON.stringify(canonicalize(parsedExp));
+                            return canonAct === canonExp;
+                        }
+
+                        // 2. Exact Match (Trimmed)
+                        if (act === exp) return true;
+
+                        // 3. Numeric Match (Handle 1024.0 vs 1024.00000)
+                        const nAct = Number(act);
+                        const nExp = Number(exp);
+                        if (!isNaN(nAct) && !isNaN(nExp)) {
+                            return Math.abs(nAct - nExp) < 1e-6;
+                        }
+
+                        // 4. Fallback String Normalization
+                        const norm = (s: string) => s.replace(/[\s"']/g, "");
+                        return norm(act) === norm(exp);
+                    };
+
+                    if (checkOutputMatch(actualRaw, expectedRaw)) {
                         setOutput(prev => ({
                             stdout: (prev?.stdout || "") + "✅ Passed\n",
                             stderr: prev?.stderr || ""
                         }));
                     } else {
+                        // Show normalized failure for clarity if numbers differ
+                        // But show raw for debug
                         setOutput(prev => ({
                             stdout: (prev?.stdout || "") + "❌ Failed\n",
-                            stderr: (prev?.stderr || "") + `\n[Test Case ${i + 1} Failed]\nExpected: ${expectedNorm}\nActual:   ${actualNorm}`
+                            stderr: (prev?.stderr || "") + `\n[Test Case ${i + 1} Failed]\nExpected: ${expectedRaw}\nActual:   ${actualRaw}`
                         }));
                         allPassed = false;
                         break;
@@ -172,7 +215,7 @@ export default function EditorFooter({ code, language, testCases, onSubmit, onAi
             // Update Progress in Firebase
             if (user?.uid && currentQuestionId) {
                 try {
-                    await updateUserProgress(user.uid, currentQuestionId, 20);
+                    await updateUserProgress(user.uid, currentQuestionId, difficulty, questionTitle);
                 } catch (e) {
                     console.error("Failed to save progress", e);
                 }

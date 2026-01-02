@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getGroqClient } from "@/lib/groq";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db as firestoreDb } from "@/lib/firebase";
 import { ALL_QUESTIONS } from "@/lib/allQuestions";
 
@@ -61,16 +61,63 @@ export async function POST(req: Request) {
         const solvedIds = new Set(userData.solvedQuestionIds || []);
         const knownTopics = userData.knownTopics || [];
 
-        // 2. Filter Candidates
+        // 2. Filter Candidates & Apply Skill Tree Logic
         const unsolvedQuestions = ALL_QUESTIONS.filter(q => !solvedIds.has(q.id));
 
         if (unsolvedQuestions.length === 0) {
-            return NextResponse.json({ message: "All questions solved!" }); // Edge case
+            return NextResponse.json({ message: "All questions solved!" });
         }
 
-        // Optimization: If list is too big, maybe filter to only Easy/Medium or specific categories?
-        // For now, Llama 3 context is large enough for ~200 questions minified.
-        const minifiedCandidates = minifyQuestions(unsolvedQuestions);
+        // --- SKILL TREE: PREREQUISITE CHECK ---
+        const availableCandidates = unsolvedQuestions.filter(q => {
+            if (!q.prerequisites || q.prerequisites.length === 0) return true; // No prereqs -> Available
+            // Check if ALL prereqs are solved
+            return q.prerequisites.every(id => solvedIds.has(id));
+        });
+
+        // If strict path locks everything (edge case), fall back to all unsolved (or smallest prereq count)
+        // But normally there's always something available (Easy ones).
+        const candidatePool = availableCandidates.length > 0 ? availableCandidates : unsolvedQuestions;
+
+        // --- SKILL TREE: DIRECT BRIDGE CHECK ---
+        // Find the most recently solved question to see if it triggers a chain
+        let lastSolvedId: string | null = null;
+        if (userData.solvedHistory && userData.solvedHistory.length > 0) {
+            // Sort to find latest
+            const sortedHistory = [...userData.solvedHistory].sort((a: any, b: any) => b.completedAt - a.completedAt);
+            lastSolvedId = sortedHistory[0].id;
+        } else if (userData.solvedQuestionIds && userData.solvedQuestionIds.length > 0) {
+            // Fallback for legacy data: pick random or last in array
+            lastSolvedId = userData.solvedQuestionIds[userData.solvedQuestionIds.length - 1];
+        }
+
+        if (lastSolvedId) {
+            const lastQuestion = ALL_QUESTIONS.find(q => q.id === lastSolvedId);
+            if (lastQuestion && lastQuestion.nextQuestionId) {
+                const nextId = lastQuestion.nextQuestionId;
+                // Verify the user hasn't already solved it AND it's not locked (shouldn't be if it's a direct link, but safe to check)
+                // Actually, if it's a direct link, we usually assume it IS the next step, but let's ensure it's in the candidate pool.
+                const directNext = candidatePool.find(q => q.id === nextId);
+
+                if (directNext) {
+                    console.log(`🧭 Navigator: Direct Bridge Activated [${lastSolvedId} -> ${nextId}]`);
+                    const decision = {
+                        questionId: nextId,
+                        reason: `Recommended next step after solving ${lastQuestion.title}.`,
+                        isNewConcept: false, // Usually bridges extend the concept
+                        conceptBrief: null
+                    };
+                    // Cache & Return
+                    await updateDoc(userRef, {
+                        recommendedNextQuestion: { ...decision, timestamp: Date.now() }
+                    });
+                    return NextResponse.json(decision);
+                }
+            }
+        }
+
+        // Optimization: Minify for AI
+        const minifiedCandidates = minifyQuestions(candidatePool);
 
         // 3. Call Groq
         const prompt = `
@@ -103,6 +150,18 @@ Select the best next question based on the rules. Return JSON only.
 
         const decision = JSON.parse(decisionJson);
         console.log("🧭 Decision:", decision);
+
+        // Optimization: Cache recommendation for "Navigator HQ" Banner
+        if (decision.questionId) {
+            await updateDoc(userRef, {
+                recommendedNextQuestion: {
+                    id: decision.questionId,
+                    reason: decision.reason,
+                    isNewConcept: decision.isNewConcept,
+                    timestamp: Date.now()
+                }
+            });
+        }
 
         return NextResponse.json(decision);
 

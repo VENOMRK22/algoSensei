@@ -17,8 +17,10 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 
+import { getXPForDifficulty } from "./gamification";
+
 // Helper to update user progress
-export const updateUserProgress = async (uid: string, questionId: string, xpResult: number) => {
+export const updateUserProgress = async (uid: string, questionId: string, difficulty: string, title: string) => {
     const userRef = doc(db, "users", uid);
 
     // Check if already solved to prevent XP farming
@@ -34,11 +36,19 @@ export const updateUserProgress = async (uid: string, questionId: string, xpResu
     }
 
     // First time solving: Award XP
-    const timestamp = new Date().toISOString();
+    const xpAmount = getXPForDifficulty(difficulty);
+
+    // Store localized history item
+    const historyItem = {
+        id: questionId,
+        title: title,
+        difficulty: difficulty,
+        completedAt: Date.now() // Timestamp for "Today/Yesterday" logic
+    };
 
     await updateDoc(userRef, {
         solvedQuestionIds: arrayUnion(questionId),
-        xp: increment(xpResult),
-        [`solvedAt.${questionId}`]: timestamp
+        solvedHistory: arrayUnion(historyItem),
+        xp: increment(xpAmount)
     });
 };

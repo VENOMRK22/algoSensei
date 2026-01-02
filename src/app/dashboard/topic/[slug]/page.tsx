@@ -5,11 +5,12 @@ import { useParams, useRouter } from "next/navigation";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Question } from "@/types/question";
-import { ArrowLeft, CheckCircle, Circle, Play, Lock } from "lucide-react";
+import { ArrowLeft, CheckCircle, Circle, Play, Lock, Cpu, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { TechGridBackground } from "@/components/ui/tech-grid-background";
+import { motion } from "framer-motion";
 
-// Mapping from URL slug to Firestore 'category' field
 // Mapping from URL slug to Firestore 'category' field
 const SLUG_TO_CATEGORY: Record<string, string> = {
     'math-logic': 'Basic Math & Logic',
@@ -89,87 +90,136 @@ export default function TopicDetailsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-                <div className="text-blue-500 animate-pulse">Loading Questions...</div>
+            <div className="min-h-screen bg-black flex items-center justify-center relative overflow-hidden">
+                <TechGridBackground activeColor="text-orange-500" blobColors={["bg-orange-500/10", "bg-amber-600/10"]} baseOpacity={0.2} />
+                <div className="flex flex-col items-center gap-4 relative z-10">
+                    <div className="w-16 h-16 border-4 border-orange-500/30 border-t-orange-400 rounded-full animate-spin" />
+                    <div className="text-orange-400 font-mono animate-pulse tracking-widest uppercase">Initializing Stream...</div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white p-6 md:p-12 font-outfit">
-            <div className="max-w-4xl mx-auto space-y-8">
+        <div className="min-h-screen bg-black text-white p-6 md:p-12 font-sans relative overflow-x-hidden selection:bg-orange-500/30">
+            {/* Sci-Fi Background Layer - ORANGE THEME */}
+            <div className="fixed inset-0 z-0 pointer-events-none">
+                <TechGridBackground activeColor="text-orange-500" blobColors={["bg-orange-500/10", "bg-amber-600/10"]} baseOpacity={0.2} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+            </div>
+
+            <div className="max-w-7xl mx-auto space-y-8 relative z-10">
 
                 {/* Header */}
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => router.back()}
-                        className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-                    >
-                        <ArrowLeft size={20} className="text-slate-400" />
-                    </button>
-                    <div>
-                        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                            {topicName}
-                        </h1>
-                        <p className="text-slate-400 text-sm">
-                            {questions.length} Questions Available
-                        </p>
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col md:flex-row items-start md:items-center gap-4 justify-between"
+                >
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => router.back()}
+                            className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-orange-500/50 rounded-xl transition-all group backdrop-blur-md"
+                        >
+                            <ArrowLeft size={20} className="text-white/60 group-hover:text-orange-400 transition-colors" />
+                        </button>
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] font-mono uppercase tracking-widest">
+                                    Module Loaded
+                                </span>
+                            </div>
+                            <h1 className="text-3xl md:text-5xl font-black text-white font-mono tracking-tighter uppercase" style={{ textShadow: "0 0 30px rgba(249,115,22,0.3)" }}>
+                                {topicName}
+                            </h1>
+                        </div>
                     </div>
-                </div>
 
-                {/* Question List */}
-                <div className="bg-slate-900/50 backdrop-blur-md border border-white/5 rounded-2xl overflow-hidden">
+                    <div className="flex items-center gap-4 bg-white/5 border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-xl">
+                        <div className="text-right">
+                            <p className="text-xs text-white/40 font-mono uppercase tracking-widest">Protocol Status</p>
+                            <p className="text-lg font-bold text-orange-400">
+                                {questions.filter(q => solvedIds.includes(q.id)).length} / {questions.length} <span className="text-sm text-white/50 font-normal">Solved</span>
+                            </p>
+                        </div>
+                        <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center border border-orange-500/30 animate-pulse">
+                            <Cpu className="w-5 h-5 text-orange-400" />
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* Grid Container */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                >
                     {questions.length === 0 ? (
-                        <div className="p-12 text-center text-slate-500">
-                            <p>No questions found for this topic yet.</p>
-                            <p className="text-sm mt-2">Did you run the seed script?</p>
+                        <div className="p-20 text-center flex flex-col items-center gap-4 bg-white/5 rounded-3xl border border-white/10">
+                            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-2">
+                                <Lock className="w-6 h-6 text-white/20" />
+                            </div>
+                            <p className="text-white/40 font-mono text-lg">No data protocols found for this sector.</p>
                         </div>
                     ) : (
-                        <div className="divide-y divide-white/5">
-                            {questions.map((q) => {
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {questions.map((q, idx) => {
                                 const isSolved = solvedIds.includes(q.id);
                                 return (
-                                    <div key={q.id} className="p-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors group">
-                                        <div className="flex items-center gap-4">
-                                            {isSolved ? (
-                                                <CheckCircle className="text-emerald-500" size={20} />
-                                            ) : (
-                                                <Circle className="text-slate-600 group-hover:text-slate-400 transition-colors" size={20} />
-                                            )}
-
-                                            <div>
-                                                <h3 className="font-medium text-slate-200 group-hover:text-white transition-colors">
-                                                    {q.title}
-                                                </h3>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className={`text-xs px-2 py-0.5 rounded-full border ${q.difficulty === 'Easy' ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/10' :
-                                                        q.difficulty === 'Medium' ? 'border-amber-500/20 text-amber-400 bg-amber-500/10' :
-                                                            'border-red-500/20 text-red-400 bg-red-500/10'
-                                                        }`}>
-                                                        {q.difficulty}
-                                                    </span>
-                                                    {q.logicTags?.map(tag => (
-                                                        <span key={tag} className="text-xs text-slate-500 capitalize">
-                                                            {tag.replace(/-/g, ' ')}
-                                                        </span>
-                                                    ))}
+                                    <motion.div
+                                        key={q.id}
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: idx * 0.05 + 0.1 }}
+                                        whileHover={{ y: -5 }}
+                                        className="flex flex-col gap-4 p-6 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl hover:border-orange-500/50 hover:bg-white/10 transition-all group relative overflow-hidden"
+                                    >
+                                        {/* Top Row: Status & Difficulty */}
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center gap-3">
+                                                {/* Circle Check */}
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${isSolved ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-white/20'}`}>
+                                                    {isSolved ? <CheckCircle size={16} /> : <Circle size={16} />}
                                                 </div>
                                             </div>
+                                            <span className={`text-[10px] px-2 py-1 rounded bg-black/40 border uppercase tracking-wider font-bold ${q.difficulty === 'Easy' ? 'border-emerald-500/30 text-emerald-400' :
+                                                q.difficulty === 'Medium' ? 'border-yellow-500/30 text-yellow-400' :
+                                                    'border-red-500/30 text-red-400'
+                                                }`}>
+                                                {q.difficulty}
+                                            </span>
                                         </div>
 
-                                        <Link href={`/practice/${q.id}`}>
-                                            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white transition-all text-sm font-medium">
-                                                Solve
-                                                <Play size={14} />
-                                            </button>
-                                        </Link>
-                                    </div>
+                                        {/* Title */}
+                                        <h3 className="font-bold text-lg text-white group-hover:text-orange-400 transition-colors font-mono min-h-[56px] line-clamp-2">
+                                            {q.title}
+                                        </h3>
+
+                                        {/* Bottom Row: Tags & Action */}
+                                        <div className="mt-auto pt-4 flex items-center justify-between border-t border-white/5">
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {q.logicTags?.slice(0, 2).map(tag => (
+                                                    <span key={tag} className="text-[10px] text-white/40 bg-white/5 px-2 py-0.5 rounded capitalize">
+                                                        {tag.replace(/-/g, ' ')}
+                                                    </span>
+                                                ))}
+                                                {(q.logicTags?.length || 0) > 2 && (
+                                                    <span className="text-[10px] text-white/20 px-1">+{q.logicTags!.length - 2}</span>
+                                                )}
+                                            </div>
+
+                                            <Link href={`/practice/${q.id}`}>
+                                                <button className="flex items-center justify-center w-10 h-10 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white transition-all shadow-[0_0_10px_rgba(249,115,22,0.0)] hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]">
+                                                    <Play size={16} fill="currentColor" />
+                                                </button>
+                                            </Link>
+                                        </div>
+                                    </motion.div>
                                 );
                             })}
                         </div>
                     )}
-                </div>
-
+                </motion.div>
             </div>
         </div>
     );

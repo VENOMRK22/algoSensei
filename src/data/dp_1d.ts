@@ -41,7 +41,8 @@ var climbStairs = function(n) {
             { input: `2`, expectedOutput: `2` },
             { input: `3`, expectedOutput: `3` }
         ],
-        order: 171
+        order: 171,
+        nextQuestionId: "min-cost-climbing-stairs"
     },
     {
         id: "min-cost-climbing-stairs",
@@ -85,7 +86,8 @@ var minCostClimbingStairs = function(cost) {
             { input: `[10,15,20]`, expectedOutput: `15` },
             { input: `[1,100,1,1,1,100,1,1,100,1]`, expectedOutput: `6` }
         ],
-        order: 172
+        order: 172,
+        prerequisites: ["climbing-stairs"]
     },
     {
         id: "house-robber",
@@ -126,7 +128,8 @@ var rob = function(nums) {
             { input: `[1,2,3,1]`, expectedOutput: `4` },
             { input: `[2,7,9,3,1]`, expectedOutput: `12` }
         ],
-        order: 173
+        order: 173,
+        nextQuestionId: "house-robber-ii"
     },
     {
         id: "house-robber-ii",
@@ -167,7 +170,8 @@ var rob = function(nums) {
             { input: `[1,2,3,1]`, expectedOutput: `4` },
             { input: `[1,2,3]`, expectedOutput: `3` }
         ],
-        order: 174
+        order: 174,
+        prerequisites: ["house-robber"]
     },
     {
         id: "longest-palindromic-substring",

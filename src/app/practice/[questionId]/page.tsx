@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Question } from "@/types/question";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { Sparkles, Mic, Code } from "lucide-react";
 import ProblemDescription from "@/components/workspace/ProblemDescription";
 import CodeEditor from "@/components/workspace/CodeEditor";
 import EditorFooter from "@/components/workspace/EditorFooter";
@@ -14,7 +15,8 @@ import AIPanel from "@/components/workspace/AIPanel";
 import AiTutorPanel from "@/components/workspace/AiTutorPanel";
 import VictoryOverlay from "@/components/game/VictoryOverlay";
 import { useAuth } from "@/context/AuthContext";
-import { Sparkles, Mic, Code } from "lucide-react";
+import { TOPIC_ID_TO_CATEGORY } from "@/lib/allQuestions";
+import { getXPForDifficulty } from "@/lib/gamification";
 
 export default function PracticePage() {
     const { user } = useAuth();
@@ -71,6 +73,16 @@ export default function PracticePage() {
                     setQuestion(qData);
                     // Set default code based on current language
                     setCode(qData.defaultCode[language] || "");
+
+                    // NEW: Track Last Active Question for "Resume" Banner
+                    if (user) {
+                        const userRef = doc(db, "users", user.uid);
+                        await updateDoc(userRef, {
+                            lastActiveQuestionId: questionId,
+                            lastActiveTimestamp: serverTimestamp()
+                        });
+                    }
+
                 } else {
                     setNotFound(true);
                 }
@@ -83,7 +95,7 @@ export default function PracticePage() {
         };
 
         fetchQuestion();
-    }, [questionId]);
+    }, [questionId, user]);
 
     // Added: Update code when language changes
     useEffect(() => {
@@ -247,6 +259,8 @@ export default function PracticePage() {
                             <EditorFooter
                                 code={code}
                                 language={language}
+                                difficulty={question?.difficulty || "Easy"}
+                                questionTitle={question?.title || "Unknown Problem"}
                                 testCases={question?.testCases}
                                 onSubmit={handleSubmit}
                                 onAiToggle={() => setActiveTab(prev => prev === 'ai' ? 'problem' : 'ai')}
@@ -267,10 +281,11 @@ export default function PracticePage() {
             <VictoryOverlay
                 show={showVictory}
                 questionTitle={question?.title || "Unknown Problem"}
-                xpEarned={20}
+                xpEarned={question ? getXPForDifficulty(question.difficulty) : 20}
                 currentXP={currentXP} // Real User XP
                 userId={user?.uid || ""}
                 onClose={() => setShowVictory(false)}
+                topicId={question ? Object.keys(TOPIC_ID_TO_CATEGORY).find(key => TOPIC_ID_TO_CATEGORY[key] === question.category) : undefined}
             />
 
             {/* Pre-Lobby / Mode Selection Modal */}

@@ -25,4 +25,9 @@ export interface Question {
     testCases: TestCase[];
 
     order: number;            // For sorting (1, 2, 3...)
+
+    // Skill Tree / Progression
+    prerequisites?: string[]; // IDs of questions that MUST be solved first
+    nextQuestionId?: string;  // ID of the recommended next question (Direct Bridge)
+    similarQuestionIds?: string[]; // IDs for Lateral Moves (Fallback/Explorer mode)
 }

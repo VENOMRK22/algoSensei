@@ -64,7 +64,8 @@ class Solution {
             { input: `[1,2,3,4,5]`, expectedOutput: `[5,4,3,2,1]` },
             { input: `[1,2]`, expectedOutput: `[2,1]` }
         ],
-        order: 21
+        order: 21,
+        nextQuestionId: "palindrome-linked-list"
     },
     {
         id: "merge-two-sorted-lists",
@@ -442,7 +443,8 @@ class Solution {
             { input: `[1,2,2,1]`, expectedOutput: `true` },
             { input: `[1,2]`, expectedOutput: `false` }
         ],
-        order: 27
+        order: 27,
+        prerequisites: ["reverse-linked-list"]
     },
     {
         id: "intersection-of-two-linked-lists",

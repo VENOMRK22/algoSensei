@@ -132,29 +132,79 @@ ${runnableCode}
         const importBlock = Array.from(new Set([...imports, "import java.util.*;", "import java.io.*;", "import java.lang.reflect.*;"])).join('\n');
 
         // Helper method for array printing in Java to match JSON format [1,2,3]
+        // Helper method for array printing in Java to match JSON format [1,2,3]
         const printerHelper = `
     private static void printResult(Object result) {
-        if (result == null) {
-            System.out.println("null");
-        } else if (result.getClass().isArray()) {
-            if (result instanceof int[]) {
-                System.out.println(Arrays.toString((int[]) result).replace(" ", ""));
-            } else if (result instanceof Object[]) {
-                System.out.println(Arrays.deepToString((Object[]) result).replace(" ", ""));
-            } else {
-                 // Fallback for other arrays
-                 System.out.println(Arrays.toString((Object[])result));
-            }
-        } else {
-            System.out.println(result);
+        System.out.println(toJSON(result));
+    }
+
+    private static String toJSON(Object obj) {
+        if (obj == null) return "null";
+        
+        if (obj instanceof String) {
+            return "\\"" + obj.toString().replace("\\"", "\\\\\\\"") + "\\"";
         }
+        
+        if (obj instanceof Number || obj instanceof Boolean) {
+            return obj.toString();
+        }
+        
+        if (obj instanceof Character) {
+             return "\\"" + obj + "\\"";
+        }
+
+        if (obj.getClass().isArray()) {
+            StringBuilder sb = new StringBuilder("[");
+            int len = Array.getLength(obj);
+            for (int i = 0; i < len; i++) {
+                if (i > 0) sb.append(",");
+                sb.append(toJSON(Array.get(obj, i)));
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+        
+        if (obj instanceof Iterable) {
+            StringBuilder sb = new StringBuilder("[");
+            Iterator<?> it = ((Iterable<?>) obj).iterator();
+            while (it.hasNext()) {
+                sb.append(toJSON(it.next()));
+                if (it.hasNext()) sb.append(",");
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+        
+        if (obj instanceof Map) {
+            StringBuilder sb = new StringBuilder("{");
+            Map map = (Map) obj;
+            Iterator it = map.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry entry = (Map.Entry) it.next();
+                sb.append(toJSON(String.valueOf(entry.getKey())));
+                sb.append(":");
+                sb.append(toJSON(entry.getValue()));
+                if (it.hasNext()) sb.append(",");
+            }
+            sb.append("}");
+            return sb.toString();
+        }
+
+        return obj.toString(); // Fallback
     }
         `;
 
-        // Input Parser Helper (Basic Support for int[] and int)
+        // Input Parser Helper (Expanded Support)
         const parserHelper = `
     private static Object parseInput(String input, Class<?> type) {
         input = input.trim();
+        // Remove quotes if generic string
+        if ((type != String.class) && input.startsWith("\\"") && input.endsWith("\\"")) {
+             // Only strip quotes if we are NOT parsing a String, or if it's double-serialized
+             // For primitives, we strip.
+             input = input.substring(1, input.length() - 1);
+        }
+        
         if (type == int[].class) {
             input = input.replace("[", "").replace("]", "");
             if (input.isEmpty()) return new int[0];
@@ -164,12 +214,39 @@ ${runnableCode}
             return arr;
         } else if (type == int.class || type == Integer.class) {
             return Integer.parseInt(input);
+        } else if (type == double.class || type == Double.class) {
+            return Double.parseDouble(input);
+        } else if (type == long.class || type == Long.class) {
+            // Remove 'L' suffix if present
+            input = input.replace("L", "").replace("l", "");
+            return Long.parseLong(input);
+        } else if (type == boolean.class || type == Boolean.class) {
+            return Boolean.parseBoolean(input);
         } else if (type == String.class) {
              // Basic quote check
              if (input.startsWith("\\"") && input.endsWith("\\"")) {
                  return input.substring(1, input.length() - 1);
              }
              return input;
+        } else if (type == String[].class) {
+            input = input.trim();
+            if (input.startsWith("[")) input = input.substring(1);
+            if (input.endsWith("]")) input = input.substring(0, input.length() - 1);
+            
+            if (input.trim().isEmpty()) return new String[0];
+            
+            // Naive CSV split (won't handle commas inside strings, but sufficient for MVP ["a", "b"])
+            String[] parts = input.split(",");
+            String[] res = new String[parts.length];
+            for(int i=0; i<parts.length; i++) {
+                String p = parts[i].trim();
+                // Remove quotes if present
+                if (p.startsWith("\\"") && p.endsWith("\\"")) {
+                    p = p.substring(1, p.length() - 1);
+                }
+                res[i] = p;
+            }
+            return res;
         }
         // Fallback: Return raw string or null (improve in future)
         return null; 
@@ -200,24 +277,78 @@ public class Main {
             }
 
             // Parse Input
-            // We assume inputStr comes formatted from the TS side (e.g. "[1,2,3]")
+            // We assume inputStr comes formatted from the TS side (e.g. "[1,2,3]" or "[2.0, 10]")
             String rawInput = "${inputStr.replace(/"/g, '\\"')}";
             Class<?>[] paramTypes = targetMethod.getParameterTypes();
             
-            Object arg = null;
-            if (paramTypes.length > 0) {
-                arg = parseInput(rawInput, paramTypes[0]);
+            Object[] invokeArgs = new Object[paramTypes.length];
+            
+            // LOGIC FOR MULTI ARGUMENT
+            if (paramTypes.length == 0) {
+                 // No args
+            } else if (paramTypes.length == 1) {
+                invokeArgs[0] = parseInput(rawInput, paramTypes[0]);
+            } else {
+                // Heuristic: If multiple args, assume input is a JSON array "[arg1, arg2]" or comma list "arg1, arg2"
+                String clean = rawInput.trim();
+                // If the entire input is wrapped in brackets [arg1, arg2], strip them to get the inner list
+                if (clean.startsWith("[") && clean.endsWith("]")) {
+                    // But wait, if arg1 IS an array [1,2], we must be careful not to strip valid array brackets if it's a single arg (handled above).
+                    // For multi-args, usually the input string is just "arg1, arg2".
+                    // Ifdb stores it as "[arg1, arg2]", we strip.
+                    clean = clean.substring(1, clean.length() - 1);
+                }
+
+                // Robust Split respecting brackets
+                List<String> parts = splitArgs(clean);
+                
+                for (int i = 0; i < paramTypes.length; i++) {
+                    if (i < parts.size()) {
+                         invokeArgs[i] = parseInput(parts.get(i), paramTypes[i]);
+                    }
+                }
             }
 
             // Invoke
-            Object result = targetMethod.invoke(sol, arg);
+            Object result = targetMethod.invoke(sol, invokeArgs);
             
             // Print Output
             printResult(result);
 
+        } catch (InvocationTargetException e) {
+             e.getTargetException().printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private static List<String> splitArgs(String input) {
+        List<String> list = new ArrayList<>();
+        int bracketLevel = 0;
+        int curlyLevel = 0;
+        boolean inQuote = false;
+        StringBuilder current = new StringBuilder();
+        
+        for (char c : input.toCharArray()) {
+            if (c == '"' && (current.length() == 0 || current.charAt(current.length()-1) != '\\\\')) {
+                inQuote = !inQuote;
+            }
+            if (!inQuote) {
+                if (c == '[') bracketLevel++;
+                if (c == ']') bracketLevel--;
+                if (c == '{') curlyLevel++;
+                if (c == '}') curlyLevel--;
+            }
+            
+            if (c == ',' && bracketLevel == 0 && curlyLevel == 0 && !inQuote) {
+                list.add(current.toString().trim());
+                current.setLength(0);
+            } else {
+                current.append(c);
+            }
+        }
+        list.add(current.toString().trim());
+        return list;
     }
 
     ${printerHelper}

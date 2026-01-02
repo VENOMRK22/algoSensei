@@ -40,7 +40,8 @@ var search = function(nums, target) {
             { input: `[-1,0,3,5,9,12], 9`, expectedOutput: `4` },
             { input: `[-1,0,3,5,9,12], 2`, expectedOutput: `-1` }
         ],
-        order: 51
+        order: 51,
+        nextQuestionId: "search-insert-position"
     },
     {
         id: "search-insert-position",
@@ -87,7 +88,9 @@ var searchInsert = function(nums, target) {
             { input: `[1,3,5,6], 2`, expectedOutput: `1` },
             { input: `[1,3,5,6], 7`, expectedOutput: `4` }
         ],
-        order: 52
+        order: 52,
+        prerequisites: ["binary-search"],
+        nextQuestionId: "find-first-and-last-position-of-element-in-sorted-array"
     },
     {
         id: "peak-index-in-a-mountain-array",

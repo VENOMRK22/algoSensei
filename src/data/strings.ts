@@ -45,7 +45,8 @@ var isAnagram = function(s, t) {
             { input: `"anagram", "nagaram"`, expectedOutput: `true` },
             { input: `"rat", "car"`, expectedOutput: `false` }
         ],
-        order: 11
+        order: 11,
+        nextQuestionId: "group-anagrams"
     },
     {
         id: "valid-palindrome",
@@ -288,7 +289,8 @@ var groupAnagrams = function(strs) {
             { input: `[""]`, expectedOutput: `[[""]]` },
             { input: `["a"]`, expectedOutput: `[["a"]]` }
         ],
-        order: 17
+        order: 17,
+        prerequisites: ["valid-anagram"]
     },
     {
         id: "palindromic-substrings",

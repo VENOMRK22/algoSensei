@@ -9,10 +9,16 @@ import { TOPICS, LEVELS } from "@/lib/topics";
 import { getQuestionsByTopicId } from "@/lib/allQuestions";
 import { Question } from "@/types/question";
 import StatCard from "@/components/dashboard/StatCard";
+import DashboardBanner from "@/components/dashboard/DashboardBanner";
 import LearningPathCard from "@/components/dashboard/LearningPathCard";
 import { Trophy, Target, Zap, Sparkles } from "lucide-react";
+import LevelSection from "@/components/dashboard/LevelSection";
+import DashboardBranding from "@/components/dashboard/DashboardBranding";
 import { motion, AnimatePresence } from "framer-motion";
 import { TechGridBackground } from "@/components/ui/tech-grid-background";
+import SmartBanners from "@/components/dashboard/SmartBanners";
+
+import { calculateLevel } from "@/lib/gamification";
 
 export default function DashboardPage() {
     const { user } = useAuth();
@@ -29,7 +35,16 @@ export default function DashboardPage() {
         const itemsRef = doc(db, "users", user.uid);
         const unsubscribe = onSnapshot(itemsRef, (doc) => {
             if (doc.exists()) {
-                setUserData(doc.data());
+                const data = doc.data();
+                setUserData(data);
+
+                // REDIRECT CHECK: If user hasn't onboarded, send them there
+                // We check for 'hasOnboarded' flag OR existence of knownTopics to support legacy users
+                if (!data.hasOnboarded && !data.knownTopics) {
+                    console.log("Redirecting to Onboarding...");
+                    router.push("/onboarding");
+                    return;
+                }
             }
             setLoading(false);
         });
@@ -39,7 +54,7 @@ export default function DashboardPage() {
 
     // Derived Stats
     const currentXP = userData?.xp || 0;
-    const currentLevel = Math.floor(currentXP / 100) + 1;
+    const { currentLevel } = calculateLevel(currentXP);
     const solvedCount = userData?.solvedQuestionIds?.length || 0;
 
     const getSolvedForTopic = (topicId: string) => {
@@ -72,126 +87,67 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="relative flex-1 overflow-hidden h-full">
-             {/* Dynamic Background */}
+        <div className="relative flex-1 overflow-hidden h-full select-none">
+            {/* Dynamic Background */}
             <div className="fixed inset-0 z-0 pointer-events-none">
                 <TechGridBackground />
             </div>
 
-            <div className="relative z-10 h-full overflow-y-auto custom-scrollbar focus-mode-wrapper p-6">
-                <motion.div 
+            <div className="relative z-10 h-full overflow-y-auto custom-scrollbar focus-mode-wrapper">
+                <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
-                    className="max-w-6xl mx-auto space-y-10 pb-20"
                 >
-                    {/* Header */}
-                    <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 border-b border-white/5 pb-6">
-                        <div>
-                            <motion.h2 
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.2 }}
-                                className="text-4xl font-bold tracking-tighter mb-2 text-white font-mono uppercase"
-                            >
-                                Dashboard
-                            </motion.h2>
-                            <motion.p 
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.3 }}
-                                className="text-muted-foreground text-lg"
-                            >
-                                System Status: Active // User: {user?.displayName || 'Cadet'}
-                            </motion.p>
+                    {/* Header Branding - Full Width */}
+                    {/* No padding or max-width constraint here */}
+                    <div className="w-full pt-32 pb-6">
+                        <DashboardBranding />
+                    </div>
+
+                    {/* Main Content Area - Constrained & Centered */}
+                    {/* Added mt-8 to bring content lower as requested */}
+                    <div className="max-w-7xl md:max-w-[90rem] mx-auto px-6 md:px-12 space-y-16 pb-20 mt-8">
+
+                        {/* Command Deck Banner */}
+                        <div className="w-full relative z-30">
+                            <DashboardBanner
+                                xp={currentXP}
+                                level={currentLevel}
+                                solved={solvedCount}
+                                totalQuestions={TOPICS.reduce((acc, topic) => acc + getQuestionsByTopicId(topic.id).length, 0)}
+                            />
                         </div>
-                        <motion.button
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => router.push("/navigator")}
-                            className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 px-8 h-12 font-bold uppercase tracking-widest text-sm shadow-[0_0_20px_var(--primary)] hover:shadow-[0_0_30px_var(--primary)] transition-all flex items-center gap-2 group"
-                        >
-                            <span className="relative z-10 flex items-center gap-2">
-                                <Sparkles className="w-4 h-4 fill-current" />
-                                Navigator HQ
-                            </span>
-                        </motion.button>
-                    </div>
 
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {[
-                            { icon: Zap, label: "Total XP", value: currentXP, color: "oklch(0.7 0.18 70)" },
-                            { icon: Trophy, label: "Rank", value: `Lvl.${currentLevel}`, color: "oklch(0.7 0.16 170)" },
-                            { icon: Target, label: "Solved", value: solvedCount, color: "oklch(0.7 0.2 140)" }
-                        ].map((stat, i) => (
-                            <motion.div
-                                key={stat.label}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.4 + (i * 0.1) }}
-                            >
-                                <StatCard {...stat} />
-                            </motion.div>
-                        ))}
-                    </div>
+                        {/* Smart Banners (Navigator, Continue, History) */}
+                        <div className="w-full relative z-20 mt-12">
+                            <SmartBanners />
+                        </div>
 
-                    {/* Learning Path */}
-                    <div className="space-y-16">
-                        {LEVELS.map((level, levelIndex) => {
-                            const levelTopics = TOPICS.filter(t => t.level === level.id);
-                            
-                            // Industrial Color Mapping
-                            const levelColorClass =
-                                level.id === 1 ? 'bg-[var(--chart-1)]' :
-                                    level.id === 2 ? 'bg-[var(--chart-2)]' :
-                                        level.id === 3 ? 'bg-[var(--chart-3)]' :
-                                            level.id === 4 ? 'bg-[var(--chart-4)]' :
-                                                'bg-[var(--chart-5)]';
+                        {/* Learning Path */}
+                        <div className="space-y-16">
+                            {LEVELS.map((level, levelIndex) => {
+                                const levelTopics = TOPICS.filter(t => t.level === level.id);
 
-                            return (
-                                <motion.section 
-                                    key={level.id} 
-                                    className="space-y-6"
-                                    initial={{ opacity: 0 }}
-                                    whileInView={{ opacity: 1 }}
-                                    viewport={{ once: true, margin: "-100px" }}
-                                    transition={{ duration: 0.6 }}
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className={`h-8 w-1.5 ${levelColorClass}`} />
-                                        <h3 className="text-2xl font-bold text-white font-mono uppercase tracking-wide">{level.title}</h3>
-                                        <div className="h-px bg-white/10 flex-1" />
-                                    </div>
+                                // Industrial Color Mapping
+                                const levelColorClass =
+                                    level.id === 1 ? 'bg-[var(--chart-1)]' :
+                                        level.id === 2 ? 'bg-[var(--chart-2)]' :
+                                            level.id === 3 ? 'bg-[var(--chart-3)]' :
+                                                level.id === 4 ? 'bg-[var(--chart-4)]' :
+                                                    'bg-[var(--chart-5)]';
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {levelTopics.map((topic, topicIndex) => {
-                                            const solved = getSolvedForTopic(topic.id);
-                                            const total = 10;
-                                            return (
-                                                <motion.div
-                                                    key={topic.id}
-                                                    initial={{ opacity: 0, scale: 0.95 }}
-                                                    whileInView={{ opacity: 1, scale: 1 }}
-                                                    viewport={{ once: true }}
-                                                    transition={{ delay: topicIndex * 0.1, duration: 0.4 }}
-                                                >
-                                                    <LearningPathCard
-                                                        icon={topic.icon}
-                                                        title={topic.title}
-                                                        description={topic.description}
-                                                        progress={solved}
-                                                        total={total}
-                                                    />
-                                                </motion.div>
-                                            );
-                                        })}
-                                    </div>
-                                </motion.section>
-                            );
-                        })}
+                                return (
+                                    <LevelSection
+                                        key={level.id}
+                                        level={level}
+                                        topics={levelTopics}
+                                        getSolvedForTopic={getSolvedForTopic}
+                                        levelColorClass={levelColorClass}
+                                    />
+                                );
+                            })}
+                        </div>
                     </div>
                 </motion.div>
             </div>

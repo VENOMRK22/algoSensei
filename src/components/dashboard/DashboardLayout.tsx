@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Sidebar from "./Sidebar";
+import TopNavbar from "./TopNavbar";
 import MobileNav from "./MobileNav";
 
 export default function DashboardLayout({
@@ -16,11 +16,11 @@ export default function DashboardLayout({
     }, []);
 
     return (
-        <div className="flex h-screen bg-transparent overflow-hidden">
-            <div className="aurora-bg" />
+        <div className="min-h-screen bg-transparent relative flex flex-col">
+            <div className="aurora-bg fixed inset-0 z-0" />
 
             {/* Floating Particles */}
-            <div className="particles-container">
+            <div className="particles-container fixed inset-0 z-0 pointer-events-none">
                 {particles.map((i) => (
                     <div
                         key={i}
@@ -34,18 +34,20 @@ export default function DashboardLayout({
                 ))}
             </div>
 
-            {/* Desktop Sidebar */}
-            <Sidebar />
+            {/* Top Navigation */}
+            <TopNavbar />
 
             {/* Main Content Area */}
-            <main className="flex-1 p-4 md:p-8 overflow-y-auto custom-scrollbar relative z-10 w-full">
-                <div className="max-w-7xl mx-auto md:space-y-10 pb-24 md:pb-0">
+            <main className="flex-1 w-full relative z-10">
+                <div className="w-full pb-24 md:pb-12">
                     {children}
                 </div>
             </main>
 
-            {/* Mobile Bottom Navigation */}
-            <MobileNav />
+            {/* Mobile Bottom Navigation (Optional, keeping for mobile fallback) */}
+            <div className="md:hidden">
+                <MobileNav />
+            </div>
         </div>
     );
 }

@@ -175,204 +175,195 @@ export default function NavigatorPage() {
     };
 
     return (
-        <div className="relative min-h-screen text-foreground font-sans overflow-hidden">
-             {/* Background */}
+        <div className="min-h-screen bg-black text-white font-sans selection:bg-cyan-500/30 overflow-x-hidden">
+            {/* Background */}
             <div className="fixed inset-0 z-0 pointer-events-none">
-                <TechGridBackground />
+                <TechGridBackground activeColor="text-cyan-500" blobColors={["bg-cyan-500/10", "bg-teal-500/10"]} />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,black_100%)] opacity-80" />
             </div>
 
             <div className="relative z-10 max-w-7xl mx-auto p-6 md:p-12 space-y-12">
-                
-                <motion.div 
+
+                <motion.div
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    className="space-y-12"
+                    className="space-y-16"
                 >
                     {/* 1. HEADER & HERO ACTION */}
-                    <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                    <motion.div variants={itemVariants} className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 border-b border-white/10 pb-8">
                         <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
-                                    <BrainCircuit className="text-primary" size={24} />
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="p-3 bg-cyan-500/10 rounded-xl border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                                    <BrainCircuit className="text-cyan-400" size={32} />
                                 </div>
-                                <h1 className="text-3xl font-bold tracking-tighter uppercase font-mono">Smart Navigator HQ</h1>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase font-mono text-white" style={{ textShadow: "0 0 20px rgba(6,182,212,0.5)" }}>
+                                            Navigator <span className="text-cyan-400">HQ</span>
+                                        </h1>
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-900/50 text-cyan-300 border border-cyan-700/50 uppercase tracking-widest">
+                                            Online
+                                        </span>
+                                    </div>
+                                    <p className="text-cyan-400/60 font-mono text-sm tracking-widest uppercase mt-1">
+                                        Adaptive Learning System // v2.4.0
+                                    </p>
+                                </div>
                             </div>
-                            <p className="text-muted-foreground max-w-xl text-lg">
-                                Your personalized command center. The AI tracks your progress and adapts the curriculum to your exact skill gap.
-                            </p>
                         </div>
 
                         <button
                             onClick={handleSmartStart}
                             disabled={navLoading}
                             className={`
-                                group relative overflow-hidden rounded-xl bg-primary text-primary-foreground px-8 py-6 transition-all hover:scale-105 hover:shadow-[0_0_40px_var(--primary)] active:scale-95 border border-primary/50
-                                ${navLoading ? 'opacity-80 cursor-wait' : 'shadow-2xl shadow-primary/20'}
+                                group relative overflow-hidden rounded-2xl bg-cyan-500/10 text-cyan-400 px-10 py-6 transition-all hover:bg-cyan-400 hover:text-black border border-cyan-500/50
+                                ${navLoading ? 'opacity-50 cursor-wait' : 'hover:shadow-[0_0_50px_rgba(6,182,212,0.6)]'}
                             `}
                         >
-                            <div className="absolute inset-0 bg-white/20 group-hover:translate-x-full transition-transform duration-700 skew-x-12 -translate-x-full" />
-                            <div className="flex items-center gap-4">
+                            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10" />
+                            <div className="flex items-center gap-6 relative z-10">
                                 <div className="relative">
                                     {navLoading ? (
-                                        <Activity className="animate-spin text-primary-foreground" size={32} />
+                                        <Activity className="animate-spin" size={32} />
                                     ) : (
                                         <>
-                                            <Zap className="fill-current text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-ping opacity-30" size={40} />
-                                            <Zap className="fill-current text-primary-foreground relative z-10" size={32} />
+                                            <Zap className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-ping opacity-50" size={40} />
+                                            <Zap className="relative z-10" size={32} fill="currentColor" />
                                         </>
                                     )}
                                 </div>
                                 <div className="text-left">
-                                    <div className="text-xs font-medium text-primary-foreground/80 uppercase tracking-wider font-mono">Ready to Train?</div>
-                                    <div className="text-2xl font-bold text-primary-foreground uppercase tracking-tight">{navLoading ? "Analyzing..." : "Start Adaptive Session"}</div>
+                                    <div className="text-xs font-bold opacity-70 uppercase tracking-widest font-mono mb-1">Command Priority</div>
+                                    <div className="text-2xl font-black uppercase tracking-tight">{navLoading ? "INITIALIZING..." : "INITIATE SESSION"}</div>
                                 </div>
-                                <ChevronRight className="text-primary-foreground/80 group-hover:translate-x-1 transition-transform" size={24} />
+                                <ChevronRight className="group-hover:translate-x-2 transition-transform" size={28} />
                             </div>
                         </button>
                     </motion.div>
 
-                    {/* 2. KEY STATS */}
+                    {/* 2. HUD STATS */}
                     <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="glass-panel p-6 rounded-xl flex items-center gap-4 border-l-4 border-l-emerald-500">
-                            <div className="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-                                <CheckCircle2 className="text-emerald-400" size={24} />
+                        {[
+                            { label: "Total Solved", value: solvedCount, icon: CheckCircle2, color: "emerald" },
+                            { label: "Current Rank", value: levelTitle, icon: Trophy, color: "amber", subtitle: "Level Status" },
+                            { label: "Strong Sectors", value: skillMatrix.strong.length, icon: TrendingUp, color: "cyan" },
+                            { label: "Critical Areas", value: skillMatrix.weak.length, icon: AlertCircle, color: "rose" }
+                        ].map((stat, i) => (
+                            <div key={i} className="relative group overflow-hidden bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-2xl hover:border-white/20 transition-all">
+                                <div className={`absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity text-${stat.color}-400`}>
+                                    <stat.icon size={64} />
+                                </div>
+                                <div className="relative z-10">
+                                    <div className={`text-${stat.color}-400 mb-2`}>
+                                        <stat.icon size={24} />
+                                    </div>
+                                    <div className="text-3xl font-black font-mono text-white mb-1">{stat.value}</div>
+                                    <div className="text-xs text-white/40 font-bold uppercase tracking-widest font-mono">{stat.label}</div>
+                                </div>
                             </div>
-                            <div>
-                                <div className="text-3xl font-bold font-mono">{solvedCount}</div>
-                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total Solved</div>
-                            </div>
-                        </div>
-
-                        <div className="glass-panel p-6 rounded-xl flex items-center gap-4 border-l-4 border-l-amber-500">
-                            <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                                <Trophy className="text-amber-400" size={24} />
-                            </div>
-                            <div>
-                                <div className={`text-2xl font-bold font-mono ${levelColor}`}>{levelTitle}</div>
-                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Current Rank</div>
-                            </div>
-                        </div>
-
-                        <div className="glass-panel p-6 rounded-xl flex items-center gap-4 border-l-4 border-l-blue-500">
-                            <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                                <TrendingUp className="text-blue-400" size={24} />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold font-mono">{skillMatrix.strong.length}</div>
-                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Strong Topics</div>
-                            </div>
-                        </div>
-
-                        <div className="glass-panel p-6 rounded-xl flex items-center gap-4 border-l-4 border-l-rose-500">
-                            <div className="p-3 bg-rose-500/10 rounded-lg border border-rose-500/20">
-                                <AlertCircle className="text-rose-400" size={24} />
-                            </div>
-                            <div>
-                                <div className="text-2xl font-bold font-mono">{skillMatrix.weak.length}</div>
-                                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Topics to Improve</div>
-                            </div>
-                        </div>
+                        ))}
                     </motion.div>
 
-                    {/* 3. SKILL MATRIX */}
-                    <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Strong Column */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-wider text-sm font-mono">
-                                <div className="w-2 h-2 rounded-full bg-emerald-400" /> Strong Areas
-                            </div>
-                            <div className="bg-card/30 border border-emerald-500/20 rounded-xl p-4 min-h-[200px] space-y-2 backdrop-blur-sm">
-                                {skillMatrix.strong.length === 0 && <div className="text-muted-foreground text-sm italic">Keep practicing to build mastery!</div>}
+                    {/* 3. SKILL MATRIX DECK */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* Strong */}
+                        <motion.div variants={itemVariants} className="space-y-4">
+                            <h3 className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-widest text-sm font-mono border-b border-emerald-500/20 pb-2">
+                                <div className="w-2 h-2 rounded-none bg-emerald-400 shadow-[0_0_10px_var(--emerald-400)]" /> Mastery
+                            </h3>
+                            <div className="bg-black/40 border border-emerald-500/20 rounded-2xl p-4 min-h-[200px] space-y-2 backdrop-blur-xl">
+                                {skillMatrix.strong.length === 0 && <div className="text-white/20 text-xs font-mono uppercase p-4 text-center border border-dashed border-white/10 rounded">No data available</div>}
                                 {skillMatrix.strong.map(t => (
-                                    <div key={t.id} className="flex items-center gap-3 bg-emerald-500/5 p-2 rounded-lg border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors">
-                                        <t.icon className="text-emerald-400" size={16} />
-                                        <span className="text-emerald-100 text-sm font-medium">{t.title}</span>
+                                    <div key={t.id} className="flex items-center gap-3 bg-emerald-500/5 p-3 rounded-lg border border-emerald-500/10 hover:border-emerald-500/50 transition-colors group">
+                                        <t.icon className="text-emerald-400 opacity-70 group-hover:opacity-100" size={16} />
+                                        <span className="text-emerald-100/80 text-sm font-mono group-hover:text-emerald-300">{t.title}</span>
                                     </div>
                                 ))}
                             </div>
-                        </div>
+                        </motion.div>
 
-                        {/* Mid Column */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-blue-400 font-bold uppercase tracking-wider text-sm font-mono">
-                                <div className="w-2 h-2 rounded-full bg-blue-400" /> Developing
-                            </div>
-                            <div className="bg-card/30 border border-blue-500/20 rounded-xl p-4 min-h-[200px] space-y-2 backdrop-blur-sm">
-                                {skillMatrix.mid.length === 0 && <div className="text-muted-foreground text-sm italic">Start solving new topics!</div>}
+                        {/* Mid */}
+                        <motion.div variants={itemVariants} className="space-y-4">
+                            <h3 className="flex items-center gap-2 text-cyan-400 font-bold uppercase tracking-widest text-sm font-mono border-b border-cyan-500/20 pb-2">
+                                <div className="w-2 h-2 rounded-none bg-cyan-400 shadow-[0_0_10px_var(--cyan-400)]" /> In Progress
+                            </h3>
+                            <div className="bg-black/40 border border-cyan-500/20 rounded-2xl p-4 min-h-[200px] space-y-2 backdrop-blur-xl">
+                                {skillMatrix.mid.length === 0 && <div className="text-white/20 text-xs font-mono uppercase p-4 text-center border border-dashed border-white/10 rounded">No data available</div>}
                                 {skillMatrix.mid.map(t => (
-                                    <div key={t.id} className="flex items-center gap-3 bg-blue-500/5 p-2 rounded-lg border border-blue-500/10 hover:bg-blue-500/10 transition-colors">
-                                        <t.icon className="text-blue-400" size={16} />
-                                        <span className="text-blue-100 text-sm font-medium">{t.title}</span>
+                                    <div key={t.id} className="flex items-center gap-3 bg-cyan-500/5 p-3 rounded-lg border border-cyan-500/10 hover:border-cyan-500/50 transition-colors group">
+                                        <t.icon className="text-cyan-400 opacity-70 group-hover:opacity-100" size={16} />
+                                        <span className="text-cyan-100/80 text-sm font-mono group-hover:text-cyan-300">{t.title}</span>
                                     </div>
                                 ))}
                             </div>
-                        </div>
+                        </motion.div>
 
-                        {/* Weak Column */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-muted-foreground font-bold uppercase tracking-wider text-sm font-mono">
-                                <div className="w-2 h-2 rounded-full bg-muted-foreground" /> Not Started / Weak
-                            </div>
-                            <div className="bg-card/30 border border-white/5 rounded-xl p-4 min-h-[200px] space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar backdrop-blur-sm">
+                        {/* Weak */}
+                        <motion.div variants={itemVariants} className="space-y-4">
+                            <h3 className="flex items-center gap-2 text-rose-400 font-bold uppercase tracking-widest text-sm font-mono border-b border-rose-500/20 pb-2">
+                                <div className="w-2 h-2 rounded-none bg-rose-400 shadow-[0_0_10px_var(--rose-400)]" /> Attention Required
+                            </h3>
+                            <div className="bg-black/40 border border-rose-500/20 rounded-2xl p-4 min-h-[200px] space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar backdrop-blur-xl">
                                 {skillMatrix.weak.map(t => (
-                                    <div key={t.id} className="flex items-center gap-3 hover:bg-white/5 p-2 rounded-lg transition-colors opacity-60 hover:opacity-100 group">
-                                        <t.icon className="text-muted-foreground group-hover:text-foreground transition-colors" size={16} />
-                                        <span className="text-muted-foreground group-hover:text-foreground text-sm font-medium transition-colors">{t.title}</span>
+                                    <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg border border-transparent hover:border-rose-500/30 hover:bg-rose-500/5 transition-all group opacity-60 hover:opacity-100">
+                                        <t.icon className="text-rose-400" size={16} />
+                                        <span className="text-rose-100/80 text-sm font-mono group-hover:text-rose-300">{t.title}</span>
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    </motion.div>
+                        </motion.div>
+                    </div>
 
-                    {/* 4. HISTORY TABLE (Paginated) */}
+                    {/* 4. DATA LOG */}
                     <motion.div variants={itemVariants} className="space-y-6">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-bold font-mono uppercase tracking-wide">Solved History</h2>
-                            <div className="text-sm text-muted-foreground font-mono">
-                                Showing {visibleHistory.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0} - {Math.min(currentPage * ITEMS_PER_PAGE, solvedQuestionsList.length)} of {solvedQuestionsList.length}
+                        <div className="flex items-center justify-between border-l-4 border-cyan-500 pl-4">
+                            <h2 className="text-2xl font-black font-mono uppercase tracking-widest text-white">Mission Log</h2>
+                            <div className="text-xs text-cyan-500 font-mono uppercase tracking-widest">
+                                Segment {visibleHistory.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0} - {Math.min(currentPage * ITEMS_PER_PAGE, solvedQuestionsList.length)} // {solvedQuestionsList.length} Total
                             </div>
                         </div>
 
-                        <div className="bg-card/40 rounded-xl border border-white/5 overflow-hidden backdrop-blur-md">
+                        <div className="bg-black/40 rounded-2xl border border-white/10 overflow-hidden backdrop-blur-xl relative">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent opacity-50" />
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-white/5 border-b border-white/5 text-xs uppercase tracking-wider text-muted-foreground font-mono">
-                                        <th className="p-4 pl-6 font-medium">Problem</th>
-                                        <th className="p-4 font-medium">Difficulty</th>
-                                        <th className="p-4 font-medium">Category</th>
-                                        <th className="p-4 font-medium">Date</th>
-                                        <th className="p-4 font-medium text-right pr-6">Action</th>
+                                    <tr className="bg-white/5 text-[10px] uppercase tracking-widest text-white/50 font-mono">
+                                        <th className="p-5 font-bold">Protocol Name</th>
+                                        <th className="p-5 font-bold">Class</th>
+                                        <th className="p-5 font-bold">Sector</th>
+                                        <th className="p-5 font-bold">Timestamp</th>
+                                        <th className="p-5 font-bold text-right">Cmd</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
                                     {visibleHistory.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="p-8 text-center text-muted-foreground italic">No questions solved yet. Start your journey!</td>
+                                            <td colSpan={5} className="p-10 text-center text-white/20 font-mono uppercase tracking-widest">No matching records found.</td>
                                         </tr>
                                     ) : (
                                         visibleHistory.map(q => (
                                             <tr key={q.id} className="hover:bg-white/5 transition-colors group">
-                                                <td className="p-4 pl-6 font-medium text-foreground">{q.title}</td>
-                                                <td className="p-4">
+                                                <td className="p-5 font-bold text-white font-mono group-hover:text-cyan-400 transition-colors">{q.title}</td>
+                                                <td className="p-5">
                                                     <span className={`
-                                                        px-2 py-0.5 rounded text-xs font-semibold font-mono
-                                                        ${q.difficulty === 'Easy' ? 'bg-emerald-500/20 text-emerald-400' :
-                                                            q.difficulty === 'Medium' ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'}
+                                                        px-2 py-1 rounded text-[10px] font-bold font-mono uppercase tracking-wider border
+                                                        ${q.difficulty === 'Easy' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                                                            q.difficulty === 'Medium' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'}
                                                     `}>
                                                         {q.difficulty}
                                                     </span>
                                                 </td>
-                                                <td className="p-4 text-muted-foreground text-sm">{q.category}</td>
-                                                <td className="p-4 text-muted-foreground text-sm font-mono">
+                                                <td className="p-5 text-white/60 text-xs uppercase tracking-wide">{q.category}</td>
+                                                <td className="p-5 text-white/40 text-xs font-mono">
                                                     {formatSmartDate(userData?.solvedAt?.[q.id])}
                                                 </td>
-                                                <td className="p-4 text-right pr-6">
+                                                <td className="p-5 text-right">
                                                     <button
                                                         onClick={() => router.push(`/practice/${q.id}`)}
-                                                        className="text-primary hover:text-primary/80 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity font-mono uppercase tracking-wider"
+                                                        className="text-cyan-500 hover:text-cyan-300 text-xs font-bold font-mono uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all hover:underline decoration-cyan-500/50 underline-offset-4"
                                                     >
-                                                        Review
+                                                        [Replay]
                                                     </button>
                                                 </td>
                                             </tr>
@@ -384,21 +375,21 @@ export default function NavigatorPage() {
 
                         {/* Pagination Controls */}
                         {totalHistoryPages > 1 && (
-                            <div className="flex justify-center gap-4 mt-6">
+                            <div className="flex justify-center gap-6 mt-8">
                                 <button
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
-                                    className="p-2 rounded-lg border border-white/10 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-primary"
+                                    className="p-3 rounded-xl border border-white/10 hover:border-cyan-500/50 hover:bg-cyan-500/10 disabled:opacity-30 disabled:cursor-not-allowed text-cyan-400 transition-all"
                                 >
                                     <ChevronLeft size={20} />
                                 </button>
-                                <span className="flex items-center px-4 font-mono text-muted-foreground">
-                                    Page {currentPage} of {totalHistoryPages}
+                                <span className="flex items-center font-mono text-xs text-white/40 uppercase tracking-widest">
+                                    Page {currentPage} / {totalHistoryPages}
                                 </span>
                                 <button
                                     onClick={() => setCurrentPage(p => Math.min(totalHistoryPages, p + 1))}
                                     disabled={currentPage === totalHistoryPages}
-                                    className="p-2 rounded-lg border border-white/10 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed text-primary"
+                                    className="p-3 rounded-xl border border-white/10 hover:border-cyan-500/50 hover:bg-cyan-500/10 disabled:opacity-30 disabled:cursor-not-allowed text-cyan-400 transition-all"
                                 >
                                     <ChevronNext size={20} />
                                 </button>

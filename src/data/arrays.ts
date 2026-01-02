@@ -52,7 +52,8 @@ var twoSum = function(nums, target) {
             { input: `[3,2,4], 6`, expectedOutput: `[1,2]` },
             { input: `[3,3], 6`, expectedOutput: `[0,1]` }
         ],
-        order: 1
+        order: 1,
+        nextQuestionId: "3sum"
     },
     {
         id: "best-time-to-buy-and-sell-stock",
@@ -218,7 +219,8 @@ var maxSubArray = function(nums) {
             { input: `[1]`, expectedOutput: `1` },
             { input: `[5,4,-1,7,8]`, expectedOutput: `23` }
         ],
-        order: 5
+        order: 5,
+        nextQuestionId: "maximum-product-subarray"
     },
     {
         id: "maximum-product-subarray",
@@ -258,7 +260,8 @@ var maxProduct = function(nums) {
             { input: `[2,3,-2,4]`, expectedOutput: `6` },
             { input: `[-2,0,-1]`, expectedOutput: `0` }
         ],
-        order: 6
+        order: 6,
+        prerequisites: ["maximum-subarray"]
     },
     {
         id: "find-minimum-in-rotated-sorted-array",
@@ -380,7 +383,8 @@ var threeSum = function(nums) {
             { input: `[-1,0,1,2,-1,-4]`, expectedOutput: `[[-1,-1,2],[-1,0,1]]` },
             { input: `[0,1,1]`, expectedOutput: `[]` }
         ],
-        order: 9
+        order: 9,
+        prerequisites: ["two-sum"]
     },
     {
         id: "container-with-most-water",
