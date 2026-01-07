@@ -231,52 +231,68 @@ export default function EditorFooter({ code, language, difficulty, questionTitle
     };
 
     return (
-        <div className="flex flex-col bg-[#1e1e1e] border-t border-white/5">
+        <div className="flex flex-col bg-[#0a0a0a] border-t border-cyan-500/10 relative z-20">
 
-            {/* Console Panel (Expandable) */}
+            {/* Console Panel (Expandable - Hacker Terminal Style) */}
             {isConsoleOpen && (
-                <div className="h-48 border-b border-white/5 flex flex-col">
-                    <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50">
-                        <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Console Output</span>
-                        <button onClick={() => setIsConsoleOpen(false)} className="text-slate-500 hover:text-white">
+                <div className="h-56 border-b border-cyan-500/10 flex flex-col bg-[#050505]">
+                    <div className="flex items-center justify-between px-4 py-2 bg-slate-900/80 border-b border-white/5">
+                        <div className="flex items-center gap-2">
+                            <Terminal size={14} className="text-emerald-500" />
+                            <span className="text-xs font-mono font-bold text-emerald-500/80 uppercase tracking-widest">System Output</span>
+                        </div>
+                        <button onClick={() => setIsConsoleOpen(false)} className="text-slate-500 hover:text-white transition-colors">
                             <X size={14} />
                         </button>
                     </div>
-                    <div className="flex-1 overflow-auto p-4 font-mono text-sm leading-relaxed">
-                        {isLoading ? (
-                            <div className="flex items-center gap-2 text-slate-400">
-                                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                                <span>Processing...</span>
-                            </div>
-                        ) : output ? (
-                            <>
-                                {output.stderr && (
-                                    <div className="text-red-400 whitespace-pre-wrap mb-4 bg-red-900/20 p-2 rounded border border-red-500/20">
-                                        {output.stderr}
-                                    </div>
-                                )}
-                                {output.stdout && (
-                                    <div className="text-slate-300 whitespace-pre-wrap">
-                                        {output.stdout}
-                                    </div>
-                                )}
-                                {!output.stderr && !output.stdout && (
-                                    <div className="text-slate-600 italic">No output returned.</div>
-                                )}
-                            </>
-                        ) : (
-                            <div className="text-slate-600 italic">Ready to execute.</div>
-                        )}
+                    <div className="flex-1 overflow-auto p-4 font-mono text-sm leading-relaxed bg-[#050505] relative">
+                        {/* CRT Scanline Effect */}
+                        <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] z-0 pointer-events-none bg-[length:100%_2px,3px_100%] opacity-20" />
+
+                        <div className="relative z-10">
+                            {isLoading ? (
+                                <div className="flex items-center gap-2 text-emerald-500/70 animate-pulse">
+                                    <span className="text-lg">_</span>
+                                    <span>Compiling execution parameters...</span>
+                                </div>
+                            ) : output ? (
+                                <>
+                                    {output.stderr && (
+                                        <div className="text-red-400 whitespace-pre-wrap mb-4 bg-red-950/20 p-3 rounded border-l-2 border-red-500 shadow-[0_0_15px_-5px_rgba(239,68,68,0.2)]">
+                                            <span className="text-xs font-bold uppercase block mb-1 opacity-50">Runtime Error</span>
+                                            {output.stderr}
+                                        </div>
+                                    )}
+                                    {output.stdout && (
+                                        <div className="text-slate-300 whitespace-pre-wrap">
+                                            {output.stdout}
+                                        </div>
+                                    )}
+                                    {!output.stderr && !output.stdout && (
+                                        <div className="text-slate-600 italic">Process finished with exit code 0. No output.</div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="text-slate-600 italic flex items-center gap-2">
+                                    <span className="text-emerald-500">➜</span>
+                                    Ready to initiate sequence.
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Footer Bar */}
-            <div className="h-14 flex items-center justify-between px-4">
+            {/* Footer Bar (Command Deck) */}
+            <div className="h-16 flex items-center justify-between px-5 bg-slate-900/30 backdrop-blur-sm">
                 {/* Console Trigger */}
                 <button
                     onClick={() => setIsConsoleOpen(!isConsoleOpen)}
-                    className={`flex items-center gap-2 transition-colors text-sm font-medium ${isConsoleOpen ? 'text-blue-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all text-sm font-medium border
+                        ${isConsoleOpen
+                            ? 'bg-slate-800 text-cyan-400 border-cyan-500/30 shadow-[0_0_10px_rgba(34,211,238,0.1)]'
+                            : 'bg-transparent text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5'
+                        }`}
                 >
                     <Terminal size={16} />
                     <span>Console</span>
@@ -289,34 +305,36 @@ export default function EditorFooter({ code, language, difficulty, questionTitle
                     {/* Hint Button */}
                     <button
                         onClick={onHint}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/5 bg-slate-800 text-yellow-500/80 hover:text-yellow-400 hover:border-yellow-500/30 transition-all text-sm font-medium"
+                        className="group flex items-center gap-2 px-4 py-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 text-yellow-500/80 hover:text-yellow-200 hover:bg-yellow-500/10 hover:border-yellow-500/50 transition-all text-sm font-bold shadow-[0_0_10px_rgba(234,179,8,0.05)] hover:shadow-[0_0_15px_rgba(234,179,8,0.2)]"
                         title="Get a Hint"
                     >
-                        <Lightbulb size={16} />
+                        <Lightbulb size={16} className="group-hover:text-yellow-200 transition-colors" />
                         <span>Hint</span>
                     </button>
 
                     {/* AI Tutor Toggle */}
                     <button
                         onClick={onAiToggle}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-sm font-medium
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-bold
                             ${isAiOpen
-                                ? 'bg-purple-600/20 text-purple-300 border-purple-500/50 shadow-[0_0_10px_rgba(147,51,234,0.15)]'
-                                : 'bg-slate-800 text-slate-400 border-white/5 hover:text-purple-300 hover:border-purple-500/30'
+                                ? 'bg-purple-600 text-white border-purple-400 shadow-[0_0_15px_rgba(147,51,234,0.4)]'
+                                : 'bg-slate-800/50 text-slate-400 border-white/5 hover:text-purple-300 hover:border-purple-500/50 hover:shadow-[0_0_10px_rgba(168,85,247,0.2)]'
                             }`}
                     >
                         <Sparkles size={16} />
                         <span>AI Tutor</span>
                     </button>
 
-                    <div className="h-4 w-px bg-white/10 mx-1"></div>
+                    <div className="h-6 w-px bg-white/10 mx-2"></div>
 
                     {/* Run Code */}
                     <button
                         onClick={handleRunCode}
                         disabled={isLoading}
-                        className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-slate-200 transition-colors text-sm font-medium
-                            ${isLoading ? 'bg-slate-800 cursor-not-allowed text-slate-500' : 'bg-slate-700 hover:bg-slate-600'}`
+                        className={`flex items-center gap-2 px-6 py-2 rounded-xl text-white transition-all text-sm font-bold border border-white/5
+                            ${isLoading
+                                ? 'bg-slate-800 cursor-not-allowed text-slate-500'
+                                : 'bg-slate-800 hover:bg-slate-700 hover:border-white/20 hover:text-cyan-200 shadow-lg'}`
                         }
                     >
                         {isLoading ? (
@@ -327,20 +345,25 @@ export default function EditorFooter({ code, language, difficulty, questionTitle
                         <span>{isLoading ? 'Running...' : 'Run'}</span>
                     </button>
 
-                    {/* Submit Code */}
+                    {/* Submit Code - Hero Button */}
                     <button
                         onClick={handleSubmit}
                         disabled={isLoading}
-                        className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-white shadow-lg transition-all text-sm font-medium
-                            ${isLoading ? 'bg-emerald-900 text-emerald-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20'}`
+                        className={`relative group flex items-center gap-2 px-6 py-2 rounded-xl text-white shadow-lg transition-all text-sm font-bold overflow-hidden
+                            ${isLoading
+                                ? 'bg-emerald-950/50 text-emerald-700 cursor-not-allowed border border-emerald-900/30'
+                                : 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 border border-emerald-400/20 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] hover:-translate-y-0.5'}`
                         }
                     >
+                        {/* Shine Effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+
                         {isLoading ? (
-                            <div className="w-4 h-4 border-2 border-emerald-200/30 border-t-white rounded-full animate-spin"></div>
+                            <div className="w-4 h-4 border-2 border-emerald-200/50 border-t-white rounded-full animate-spin"></div>
                         ) : (
                             <CheckCircle size={16} />
                         )}
-                        <span>{isLoading ? 'Grading...' : 'Submit'}</span>
+                        <span className="relative z-10">{isLoading ? 'Grading...' : 'Submit'}</span>
                     </button>
                 </div>
             </div>

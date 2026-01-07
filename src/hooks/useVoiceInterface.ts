@@ -7,6 +7,7 @@ export interface VoiceState {
     isSpeaking: boolean;
     transcript: string;
     hasBrowserSupport: boolean;
+    error: string | null;
 }
 
 export function useVoiceInterface() {
@@ -14,7 +15,8 @@ export function useVoiceInterface() {
         isListening: false,
         isSpeaking: false,
         transcript: "",
-        hasBrowserSupport: false
+        hasBrowserSupport: false,
+        error: null
     });
 
     const recognitionRef = useRef<any>(null);
@@ -50,10 +52,28 @@ export function useVoiceInterface() {
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
 
-        // Find a natural voice
+        // Find a natural confident male voice
         const voices = synthesisRef.current.getVoices();
-        const preferredVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("Zira"));
-        if (preferredVoice) utterance.voice = preferredVoice;
+
+        // Priority list for "Confident Male"
+        const preferredVoice = voices.find(v =>
+            v.name.includes("Google UK English Male") || // Deep, professional
+            v.name.includes("Microsoft James") ||        // Standard Windows Male
+            v.name.includes("Daniel") ||                 // Mac/iOS Male
+            v.name.includes("Google US English")         // Fallback high quality
+        );
+
+        if (preferredVoice) {
+            utterance.voice = preferredVoice;
+            // Slight pitch drop for authority if it's a standard voice
+            if (preferredVoice.name.includes("Google US English")) {
+                utterance.pitch = 0.9;
+                utterance.rate = 1.05; // Slightly faster for efficiency
+            } else {
+                utterance.pitch = 1.0;
+                utterance.rate = 1.0;
+            }
+        }
 
         utterance.onstart = () => setState(prev => ({ ...prev, isSpeaking: true }));
         utterance.onend = () => setState(prev => ({ ...prev, isSpeaking: false }));
@@ -66,7 +86,7 @@ export function useVoiceInterface() {
         if (!recognitionRef.current) return;
 
         // Clean previous state
-        setState(prev => ({ ...prev, isListening: true, transcript: "" }));
+        setState(prev => ({ ...prev, isListening: true, transcript: "", error: null }));
 
         recognitionRef.current.onresult = (event: any) => {
             let finalTranscript = "";
@@ -85,8 +105,14 @@ export function useVoiceInterface() {
         };
 
         recognitionRef.current.onerror = (event: any) => {
+            if (event.error === 'no-speech') return; // Simply ignore silence, don't log error
+
             console.error("Speech Error:", event.error);
-            setState(prev => ({ ...prev, isListening: false }));
+            let errorMessage = "Voice error occurred.";
+            if (event.error === 'network') errorMessage = "Network error. Please check your connection.";
+            if (event.error === 'not-allowed') errorMessage = "Microphone access denied.";
+
+            setState(prev => ({ ...prev, isListening: false, error: errorMessage }));
         };
 
         try {

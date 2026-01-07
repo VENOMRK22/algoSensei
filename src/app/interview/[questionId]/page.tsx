@@ -16,7 +16,8 @@ export default function InterviewPage() {
     // logic hook
     const {
         mode, setMode, messages, processing, sendMessage,
-        isListening, isSpeaking, transcript, startListening, stopListening, hasBrowserSupport
+        isListening, isSpeaking, transcript, startListening, stopListening, hasBrowserSupport, error: voiceError,
+        endInterview, feedback
     } = useInterviewLogic(questionTitle);
 
     const [inputText, setInputText] = useState("");
@@ -49,156 +50,313 @@ export default function InterviewPage() {
     if (!hasBrowserSupport) return <div className="p-10 text-white">Browser not supported.</div>;
 
     return (
-        <div className="h-screen bg-slate-950 flex flex-col items-center relative overflow-hidden font-outfit text-white">
+        <div className="h-screen bg-[#050B14] flex flex-col items-center relative overflow-hidden font-outfit text-white selection:bg-cyan-500/30">
 
-            {/* Header / Mode Toggle */}
-            <div className="z-20 w-full max-w-4xl p-6 flex items-center justify-between backdrop-blur-sm bg-slate-900/50 border-b border-white/5 sticky top-0">
+            {/* --- BACKGROUND EFFECTS --- */}
+            {/* Deep Space Atmosphere - Subtle Blue Tint */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(6,182,212,0.05)_0%,transparent_70%)]" />
+
+            {/* Header */}
+            <div className="z-20 w-full max-w-4xl p-6 flex items-center justify-between backdrop-blur-md bg-[#050B14]/80 border-b border-white/5 sticky top-0 rounded-b-3xl">
                 <div>
-                    <div className="text-indigo-400 text-xs font-bold tracking-wider uppercase mb-1">Mock Interview</div>
-                    <h1 className="text-xl font-bold">{questionTitle}</h1>
+                    <div className="flex items-center gap-2 mb-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                        <span className="text-cyan-500 text-[10px] font-bold tracking-[0.2em] uppercase">System Active</span>
+                    </div>
+                    <h1 className="text-xl font-bold text-slate-200 tracking-tight">{questionTitle}</h1>
                 </div>
 
-                {/* Mode Toggle */}
-                <div className="flex bg-slate-800 rounded-full p-1 border border-white/10">
+                {/* Mode Toggle - Sleek Segmented Control */}
+                <div className="flex bg-black/40 rounded-full p-1 border border-white/10 backdrop-blur-sm relative">
+                    {/* Sliding Background */}
+                    <motion.div
+                        initial={false}
+                        animate={{ x: mode === 'voice' ? 0 : '100%' }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        className="absolute left-1 top-1 bottom-1 w-[calc(50%-4px)] bg-cyan-900/30 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)] rounded-full z-0"
+                    />
+
                     <button
                         onClick={() => setMode("voice")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${mode === 'voice' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                        className={`relative z-10 flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${mode === 'voice' ? 'text-cyan-100' : 'text-slate-500 hover:text-slate-300'}`}
                     >
-                        <MicIcon size={14} />
+                        <MicIcon size={12} />
                         Voice
                     </button>
                     <button
                         onClick={() => setMode("text")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${mode === 'text' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                        className={`relative z-10 flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${mode === 'text' ? 'text-cyan-100' : 'text-slate-500 hover:text-slate-300'}`}
                     >
-                        <Keyboard size={14} />
+                        <Keyboard size={12} />
                         Text
                     </button>
                 </div>
 
                 <button
                     onClick={() => router.push(`/practice/${questionId}`)}
-                    className="flex items-center gap-2 px-5 py-2 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white transition-all text-sm font-bold"
+                    className="group flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 border border-white/10 hover:border-cyan-500/30 hover:bg-cyan-950/30 transition-all text-sm font-bold text-slate-300 hover:text-cyan-400"
                 >
-                    <Code size={16} />
-                    <span>Start Coding</span>
+                    <Code size={16} className="text-slate-500 group-hover:text-cyan-400 transition-colors" />
+                    <span>IDE</span>
                 </button>
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 w-full max-w-3xl relative flex flex-col">
+            <div className="flex-1 w-full max-w-3xl relative flex flex-col z-10">
 
-                {/* Voice Mode Visuals */}
+                {/* FEEDBACK OVERLAY - SYSTEM AUDIT REPORT */}
                 <AnimatePresence>
-                    {mode === "voice" && (
+                    {feedback && (
                         <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 flex flex-col items-center justify-center z-10"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-[#050B14]/90 backdrop-blur-xl"
                         >
-                            {/* Visualizer */}
-                            <div className="relative mb-12">
-                                <AnimatePresence>
-                                    {isListening && (
-                                        <>
-                                            <motion.div initial={{ scale: 1, opacity: 0.5 }} animate={{ scale: 2, opacity: 0 }} transition={{ repeat: Infinity, duration: 1.5 }} className="absolute inset-0 bg-indigo-500 rounded-full" />
-                                            <motion.div initial={{ scale: 1, opacity: 0.5 }} animate={{ scale: 1.5, opacity: 0 }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.5 }} className="absolute inset-0 bg-purple-500 rounded-full" />
-                                        </>
+                            <div className="w-full max-w-2xl bg-slate-900/80 border border-white/10 rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-full">
+                                <div className="text-center mb-8">
+                                    <span className="text-xs font-bold tracking-[0.3em] text-slate-500 uppercase">System Audit Complete</span>
+                                    <h2 className={`text-4xl font-extrabold mt-2 tracking-tight ${feedback.verdict === 'HIRE' ? 'text-emerald-400' : 'text-red-500'}`}>
+                                        {feedback.verdict}
+                                    </h2>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 mb-8">
+                                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5 text-center">
+                                        <div className="text-3xl font-bold text-white mb-1">{feedback.communication_score}/10</div>
+                                        <div className="text-xs font-bold tracking-wider text-slate-500 uppercase">Communication</div>
+                                    </div>
+                                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5 text-center">
+                                        <div className="text-3xl font-bold text-white mb-1">{feedback.technical_accuracy}/10</div>
+                                        <div className="text-xs font-bold tracking-wider text-slate-500 uppercase">Technical</div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div>
+                                        <h3 className="text-xs font-bold tracking-wider text-cyan-500 uppercase mb-2">Executive Summary</h3>
+                                        <p className="text-slate-300 leading-relaxed text-sm">
+                                            "{feedback.summary}"
+                                        </p>
+                                    </div>
+
+                                    {feedback.red_flags && feedback.red_flags.length > 0 && (
+                                        <div>
+                                            <h3 className="text-xs font-bold tracking-wider text-red-400 uppercase mb-2">Detected Issues</h3>
+                                            <ul className="space-y-2">
+                                                {feedback.red_flags.map((flag: string, i: number) => (
+                                                    <li key={i} className="flex items-start gap-2 text-sm text-slate-400">
+                                                        <span className="mt-1.5 w-1 h-1 rounded-full bg-red-500 flex-shrink-0" />
+                                                        {flag}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
                                     )}
-                                    {isSpeaking && (
-                                        <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 0.5 }} className="absolute inset-0 bg-emerald-500/30 rounded-full blur-xl" />
-                                    )}
-                                </AnimatePresence>
+                                </div>
 
                                 <button
-                                    onClick={isListening ? stopListening : startListening}
-                                    className={`
-                                        relative w-32 h-32 rounded-full flex items-center justify-center text-white shadow-2xl transition-all z-20
-                                        ${isListening ? 'bg-red-500 scale-110' : processing ? 'bg-slate-700' : 'bg-indigo-600 hover:bg-indigo-500 hover:scale-105'}
-                                    `}
+                                    onClick={() => router.push('/dashboard')}
+                                    className="w-full mt-8 py-4 bg-white text-black font-bold rounded-xl hover:bg-slate-200 transition-colors uppercase tracking-widest text-sm"
                                 >
-                                    {isListening ? <Square className="fill-white" size={32} /> : processing ? <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Mic size={40} />}
+                                    Return to HQ
                                 </button>
-                            </div>
-
-                            {/* Status */}
-                            <div className="text-center h-24 px-4 w-full">
-                                {isListening ? (
-                                    <div className="text-2xl font-light text-slate-200 animate-pulse">
-                                        Thinking... <br />
-                                        <span className="text-lg text-slate-400 mt-2 block opacity-70">"{transcript}"</span>
-                                    </div>
-                                ) : processing ? (
-                                    <div className="text-xl text-slate-400">Processing response...</div>
-                                ) : isSpeaking ? (
-                                    <div className="text-2xl font-medium text-white">Jarvis is speaking...</div>
-                                ) : (
-                                    <div className="text-slate-500">Tap to speak</div>
-                                )}
-                            </div>
-
-                            {/* Last Message Bubble */}
-                            <div className="mt-8 w-full px-6">
-                                {messages.length > 0 && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        key={messages.length}
-                                        className={`p-6 rounded-2xl max-w-xl mx-auto backdrop-blur-md border border-white/5 shadow-xl text-center bg-slate-800/80 text-indigo-100`}
-                                    >
-                                        <p className="text-lg leading-relaxed">
-                                            {messages[messages.length - 1].content}
-                                        </p>
-                                    </motion.div>
-                                )}
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
 
-                {/* Text Mode Visuals */}
+                {/* Voice Mode Visuals - The "Jarvis Core" */}
+                <AnimatePresence mode="wait">
+                    {mode === "voice" && (
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="absolute inset-0 flex flex-col items-center justify-center -mt-10"
+                        >
+                            {/* JARVIS CORE */}
+                            <div className="relative mb-20 group cursor-pointer" onClick={isListening ? stopListening : startListening}>
+
+                                {/* Outer Ring (Static UI) */}
+                                <div className="absolute -inset-8 border border-cyan-900/30 rounded-full scale-100 md:scale-125" />
+                                <div className="absolute -inset-8 border border-t-cyan-500/20 border-r-transparent border-b-transparent border-l-transparent rounded-full scale-100 md:scale-125 rotate-45" />
+
+                                {/* Core Container */}
+                                <div className="relative w-40 h-40 flex items-center justify-center">
+
+                                    {/* STATE: LISTENING (Breathing Pulse) */}
+                                    {isListening && (
+                                        <>
+                                            <motion.div initial={{ scale: 1, opacity: 0.2 }} animate={{ scale: 1.5, opacity: 0 }} transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }} className="absolute inset-0 bg-cyan-400 rounded-full blur-md" />
+                                            <motion.div initial={{ scale: 1, opacity: 0.1 }} animate={{ scale: 2, opacity: 0 }} transition={{ repeat: Infinity, duration: 2, delay: 0.5, ease: "easeInOut" }} className="absolute inset-0 bg-cyan-500 rounded-full blur-xl" />
+                                        </>
+                                    )}
+
+                                    {/* STATE: PROCESSING (Segmented Rotation) */}
+                                    {processing && (
+                                        <>
+                                            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }} className="absolute inset-0 border-2 border-transparent border-t-cyan-400 border-b-cyan-400 rounded-full" />
+                                            <motion.div animate={{ rotate: -180 }} transition={{ repeat: Infinity, duration: 3, ease: "linear" }} className="absolute inset-2 border-2 border-transparent border-l-cyan-600 border-r-cyan-600 rounded-full opacity-50" />
+                                        </>
+                                    )}
+
+                                    {/* STATE: SPEAKING (Waveform Ripple - Simulated) */}
+                                    {isSpeaking && (
+                                        <>
+                                            <motion.div animate={{ scale: [1, 1.05, 1], borderColor: ["#06b6d44a", "#22d3ee", "#06b6d44a"] }} transition={{ repeat: Infinity, duration: 0.4 }} className="absolute inset-0 border-4 border-cyan-400/30 rounded-full" />
+                                            <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }} transition={{ repeat: Infinity, duration: 1 }} className="absolute inset-0 border border-cyan-500/20 rounded-full" />
+                                        </>
+                                    )}
+
+                                    {/* INNER CORE (The Actual Button) */}
+                                    <div className={`
+                                        relative w-32 h-32 rounded-full flex items-center justify-center 
+                                        bg-[#050B14] border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.1)]
+                                        z-20 transition-all duration-300
+                                        ${isListening ? 'shadow-[0_0_50px_rgba(6,182,212,0.4)] border-cyan-400/50' : ''}
+                                        group-hover:scale-105 group-hover:border-cyan-400/50
+                                    `}>
+                                        {/* Core Glow */}
+                                        <div className="absolute inset-0 rounded-full bg-radial-gradient from-cyan-500/10 to-transparent opacity-50" />
+
+                                        {/* Icon - Logo with Screen Blend to remove black bg */}
+                                        <div className={`relative w-24 h-24 rounded-full overflow-hidden flex items-center justify-center transition-all duration-300 ${isListening ? 'drop-shadow-[0_0_20px_rgba(34,211,238,0.6)]' : 'opacity-80 group-hover:opacity-100'}`}>
+                                            <img
+                                                src="/algo-logo.png"
+                                                alt="AlgoSensei Logo"
+                                                className="w-full h-full object-cover mix-blend-screen hover:mix-blend-normal transition-all duration-300 scale-110"
+                                            />
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            {/* Status Text - Typewriter style */}
+                            <div className="text-center h-32 px-4 w-full max-w-2xl mx-auto space-y-4 overflow-y-auto scrollbar-hide">
+                                <AnimatePresence mode="wait">
+                                    {isListening ? (
+                                        <motion.div
+                                            key="listening"
+                                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                            className="space-y-2"
+                                        >
+                                            <span className="text-[10px] font-bold tracking-[0.3em] text-cyan-500 uppercase animate-pulse">Listening</span>
+                                            <p className="text-xl font-light text-slate-300 leading-relaxed">
+                                                "{transcript}"
+                                            </p>
+                                        </motion.div>
+                                    ) : processing ? (
+                                        <motion.div
+                                            key="processing"
+                                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                            className="space-y-2"
+                                        >
+                                            <span className="text-[10px] font-bold tracking-[0.3em] text-amber-500 uppercase">Analyzing</span>
+                                            <div className="flex justify-center gap-1">
+                                                <span className="w-1 h-1 bg-amber-500 rounded-full animate-bounce" />
+                                                <span className="w-1 h-1 bg-amber-500 rounded-full animate-bounce delay-75" />
+                                                <span className="w-1 h-1 bg-amber-500 rounded-full animate-bounce delay-150" />
+                                            </div>
+                                        </motion.div>
+                                    ) : isSpeaking ? (
+                                        <motion.div
+                                            key="speaking"
+                                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                            className="space-y-2"
+                                        >
+                                            <span className="text-[10px] font-bold tracking-[0.3em] text-emerald-500 uppercase">Responding</span>
+                                            {messages.length > 0 && (
+                                                <p className="text-lg text-emerald-100/90 leading-relaxed font-light">
+                                                    {messages[messages.length - 1].content}
+                                                </p>
+                                            )}
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div
+                                            key="idle"
+                                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                        >
+                                            {voiceError ? (
+                                                <>
+                                                    <span className="text-[10px] font-bold tracking-[0.3em] text-red-500 uppercase">System Error</span>
+                                                    <p className="text-red-400 mt-2 text-sm">{voiceError}</p>
+                                                    <p className="text-slate-600 text-xs mt-1">Tap core to retry connection</p>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="text-[10px] font-bold tracking-[0.3em] text-slate-600 uppercase">System Ready</span>
+                                                    <p className="text-slate-500 mt-2 text-sm">Tap core to initiate sequence</p>
+                                                </>
+                                            )}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Text Mode Visuals - Clean Glass Panel */}
                 <AnimatePresence>
                     {mode === "text" && (
                         <motion.div
-                            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-                            className="absolute inset-0 flex flex-col z-10"
+                            initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }}
+                            className="absolute inset-0 flex flex-col z-10 mx-4 mt-2"
                         >
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20">
+                                {messages.length === 0 && (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-600">
+                                        <div className="w-12 h-12 rounded-full border border-dashed border-slate-700 flex items-center justify-center mb-4">
+                                            <MessageSquare size={20} className="text-slate-600" />
+                                        </div>
+                                        <p className="text-sm tracking-wide uppercase font-bold text-slate-700">Comms Link Established</p>
+                                    </div>
+                                )}
                                 {messages.map((msg, i) => (
-                                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`p-3 rounded-2xl max-w-[80%] text-sm leading-relaxed ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-800 text-slate-300 rounded-tl-none border border-white/10'}`}>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                                        key={i}
+                                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                    >
+                                        <div className={`p-4 max-w-[85%] text-sm leading-relaxed backdrop-blur-md ${msg.role === 'user'
+                                            ? 'bg-cyan-950/40 border border-cyan-500/20 text-cyan-100 rounded-2xl rounded-tr-sm'
+                                            : 'bg-white/5 border border-white/5 text-slate-300 rounded-2xl rounded-tl-sm shadow-sm'
+                                            }`}>
+                                            <span className="block text-[10px] font-bold tracking-widest uppercase mb-1 opacity-50">
+                                                {msg.role === 'user' ? 'Candidate' : 'System'}
+                                            </span>
                                             {msg.content}
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 ))}
                                 {processing && (
-                                    <div className="flex justify-start">
-                                        <div className="bg-slate-800 p-3 rounded-2xl rounded-tl-none flex gap-1">
-                                            <span className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" />
-                                            <span className="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-100" />
-                                            <span className="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-200" />
+                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
+                                        <div className="bg-white/5 border border-white/5 p-4 rounded-2xl rounded-tl-sm flex gap-1.5 items-center">
+                                            <div className="w-1.5 h-1.5 bg-cyan-500/50 rounded-full animate-pulse" />
+                                            <div className="w-1.5 h-1.5 bg-cyan-500/50 rounded-full animate-pulse delay-150" />
+                                            <div className="w-1.5 h-1.5 bg-cyan-500/50 rounded-full animate-pulse delay-300" />
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 )}
                                 <div ref={messagesEndRef} />
                             </div>
 
-                            {/* Input Bar */}
-                            <div className="p-4 bg-slate-900 border-t border-white/10">
-                                <form onSubmit={handleTextSubmit} className="flex gap-2">
+                            {/* Input Bar - Industrial */}
+                            <div className="p-4 bg-[#050B14]/80 border-t border-white/5 backdrop-blur-md">
+                                <form onSubmit={handleTextSubmit} className="flex gap-3">
                                     <input
                                         type="text"
                                         value={inputText}
                                         onChange={(e) => setInputText(e.target.value)}
-                                        placeholder="Type your response..."
-                                        className="flex-1 bg-slate-800 border-none rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        placeholder="Input query..."
+                                        className="flex-1 bg-black/40 border border-white/10 rounded-lg px-5 py-4 text-white placeholder:text-slate-600 focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-500/50 outline-none transition-all font-mono text-sm"
                                         autoFocus
                                     />
                                     <button
                                         type="submit"
                                         disabled={!inputText.trim() || processing}
-                                        className="p-3 bg-indigo-600 rounded-xl hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        className="p-4 bg-cyan-900/20 border border-cyan-500/20 rounded-lg hover:bg-cyan-900/40 hover:border-cyan-500/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-cyan-400"
                                     >
-                                        <Send size={20} />
+                                        <Send size={18} />
                                     </button>
                                 </form>
                             </div>
