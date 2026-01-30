@@ -7,18 +7,25 @@ import { Mic, Square, Code, MessageSquare, Send, Keyboard, Mic as MicIcon } from
 import { useInterviewLogic, InterviewMode } from "@/hooks/useInterviewLogic";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import CodeEditor from "@/components/workspace/CodeEditor";
+import ConfidenceCamera from "@/components/workspace/ConfidenceCamera";
+import { X } from "lucide-react";
 
 export default function InterviewPage() {
     const { questionId } = useParams();
     const router = useRouter();
     const [questionTitle, setQuestionTitle] = useState("Loading...");
 
+    const [code, setCode] = useState("");
+    const [language, setLanguage] = useState<"javascript" | "python" | "java">("javascript");
+    const [showEditor, setShowEditor] = useState(false);
+
     // logic hook
     const {
         mode, setMode, messages, processing, sendMessage,
         isListening, isSpeaking, transcript, startListening, stopListening, hasBrowserSupport, error: voiceError,
-        endInterview, feedback
-    } = useInterviewLogic(questionTitle);
+        endInterview, feedback, updateViperStats
+    } = useInterviewLogic(questionTitle, code);
 
     const [inputText, setInputText] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -93,13 +100,43 @@ export default function InterviewPage() {
                 </div>
 
                 <button
-                    onClick={() => router.push(`/practice/${questionId}`)}
+                    onClick={() => setShowEditor(true)}
                     className="group flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 border border-white/10 hover:border-cyan-500/30 hover:bg-cyan-950/30 transition-all text-sm font-bold text-slate-300 hover:text-cyan-400"
                 >
                     <Code size={16} className="text-slate-500 group-hover:text-cyan-400 transition-colors" />
-                    <span>IDE</span>
+                    <span>Open Editor</span>
                 </button>
             </div>
+
+            {/* --- CODE EDITOR MODAL (HAWKEYE) --- */}
+            <AnimatePresence>
+                {showEditor && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className="absolute inset-4 z-50 bg-[#0a0a0a] border border-cyan-500/20 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+                    >
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between px-6 py-4 bg-slate-900/80 border-b border-white/10">
+                            <span className="text-sm font-bold text-cyan-400 tracking-wider uppercase">Live Coding Environment</span>
+                            <button onClick={() => setShowEditor(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-white">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        {/* Editor Body */}
+                        <div className="flex-1 relative">
+                            <CodeEditor
+                                question={{ title: questionTitle } as any}
+                                language={language}
+                                setLanguage={setLanguage}
+                                code={code}
+                                setCode={setCode}
+                            />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Content Area */}
             <div className="flex-1 w-full max-w-3xl relative flex flex-col z-10">
@@ -365,6 +402,9 @@ export default function InterviewPage() {
                 </AnimatePresence>
 
             </div>
+            {/* --- VIPER VISION CAMERA --- */}
+            <ConfidenceCamera onConfidenceUpdate={updateViperStats} />
+
         </div>
     );
 }

@@ -2,6 +2,7 @@ import Editor, { OnMount } from "@monaco-editor/react";
 import { useRef, useState, useEffect } from "react";
 import { Question } from "@/types/question";
 import { ChevronDown, Code } from "lucide-react";
+import { useSenseiWatch } from "@/hooks/useSenseiWatch";
 
 interface CodeEditorProps {
     question: Question;
@@ -20,6 +21,13 @@ export default function CodeEditor({ question, language, setLanguage, code, setC
 
     // Auto-update code when language changes, usually handled by parent, 
     // but we need to ensure the parent is passing the correct 'code' prop.
+
+    // 🤖 Proactive AI Watch
+    useSenseiWatch({
+        code,
+        language,
+        questionTitle: question?.title || "Unknown Problem"
+    });
 
     return (
         <div className="flex flex-col h-full bg-[#0a0a0a] border border-cyan-500/10 shadow-[0_0_50px_-20px_rgba(20,184,166,0.1)] overflow-hidden">

@@ -1,6 +1,34 @@
+"use client";
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import mermaid from "mermaid";
+
+mermaid.initialize({
+    startOnLoad: false,
+    theme: 'dark',
+    securityLevel: 'loose',
+});
+
+const Mermaid = ({ chart }: { chart: string }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    const [svg, setSvg] = useState<string>('');
+
+    useEffect(() => {
+        if (ref.current) {
+            const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+            mermaid.render(id, chart).then(({ svg }) => {
+                setSvg(svg);
+            }).catch((err) => {
+                console.error("Mermaid Render Error:", err);
+                // Keep the old text if render fails
+            });
+        }
+    }, [chart]);
+
+    // Dangerously Set HTML because mermaid returns Raw SVG string
+    return <div ref={ref} className="mermaid-chart flex justify-center py-4 bg-[#0d1117] rounded-lg my-2" dangerouslySetInnerHTML={{ __html: svg }} />;
+};
 
 interface Message {
     role: "user" | "model";
@@ -84,6 +112,13 @@ export default function AiTutorPanel({ history, setHistory, isLoading, onSendMes
                             <ReactMarkdown
                                 components={{
                                     code: ({ node, inline, className, children, ...props }: any) => {
+                                        const match = /language-(\w+)/.exec(className || '');
+                                        const isMermaid = match && match[1] === 'mermaid';
+
+                                        if (!inline && isMermaid) {
+                                            return <Mermaid chart={String(children).replace(/\n$/, '')} />;
+                                        }
+
                                         // HEURISTIC: If it has newline, it's a block. If not, it's inline.
                                         // We ignore the 'inline' prop because sometimes markdown parsers get it wrong for loose text.
                                         const content = String(children).trim();
