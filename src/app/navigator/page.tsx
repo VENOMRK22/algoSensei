@@ -10,7 +10,8 @@ import { ALL_QUESTIONS, getQuestionsByTopicId, TOPIC_ID_TO_CATEGORY } from "@/li
 import { Question } from "@/types/question";
 import { Zap, Trophy, BrainCircuit, Activity, ChevronRight, CheckCircle2, AlertCircle, TrendingUp, ChevronLeft, ChevronRight as ChevronNext, ArrowLeft } from "lucide-react";
 import { TechGridBackground } from "@/components/ui/tech-grid-background";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import MissionBriefingModal from "@/components/navigator/MissionBriefingModal";
 
 const formatSmartDate = (isoString?: string) => {
     if (!isoString) return "-";
@@ -36,10 +37,14 @@ export default function NavigatorPage() {
     const [loading, setLoading] = useState(true);
     const [navLoading, setNavLoading] = useState(false);
 
+    // Mission Briefing Modal
+    const [briefingRecommendation, setBriefingRecommendation] = useState<{ id: string, reason: string, strategy?: string, timestamp: number, trigger?: string, logic?: string, treeContext?: string } | null>(null);
+
     // Pagination for History
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
 
+    // --- NAVIGATION LOGIC ---
     // --- NAVIGATION LOGIC ---
     // --- NAVIGATION LOGIC ---
     const handleSmartStart = async () => {
@@ -47,43 +52,50 @@ export default function NavigatorPage() {
         setNavLoading(true);
 
         const currentSolved = new Set(userData.solvedQuestionIds || []);
-        const CACHE_KEY = `navigator_rec_${user.uid}`;
+        let finalDecision: { id: string, reason: string, strategy?: string, timestamp: number, trigger?: string, logic?: string, treeContext?: string } | null = null;
 
         try {
-            // 1. Check Cache
-            const cachedParams = localStorage.getItem(CACHE_KEY);
-            if (cachedParams) {
-                const decision = JSON.parse(cachedParams);
-                // If we have a recommendation AND the user hasn't solved it yet -> Use it!
-                if (decision.questionId && !currentSolved.has(decision.questionId)) {
-                    console.log("🧭 Using Cached Recommendation:", decision.questionId);
-                    router.push(`/practice/${decision.questionId}`);
-                    return; // Exit early
+            // 1. Check Firestore (Server Truth)
+            if (userData.recommendedNextQuestion?.id && !currentSolved.has(userData.recommendedNextQuestion.id)) {
+                console.log("🧭 Using Server Recommendation:", userData.recommendedNextQuestion.id);
+                finalDecision = userData.recommendedNextQuestion;
+            } else {
+                // 2. Fetch Fresh
+                const res = await fetch("/api/navigator/recommend", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ uid: user.uid })
+                });
+
+                const decision = await res.json();
+                if (decision.error) {
+                    alert("Navigator Error: " + decision.error);
+                    return;
+                }
+
+                if (decision.message === "All questions solved!") {
+                    alert("You have solved everything!");
+                    return;
+                }
+
+                // Construct decision object compliant with interface
+                if (decision.questionId) {
+                    finalDecision = {
+                        id: decision.questionId,
+                        reason: decision.reasoning || "Optimized path selection.",
+                        strategy: decision.actionType,
+                        timestamp: Date.now(),
+                        trigger: decision.trigger,
+                        logic: decision.logic,
+                        treeContext: decision.treeContext
+                    };
                 }
             }
 
-            // 2. Fetch Fresh (Cache Miss or Expired/Solved)
-            const res = await fetch("/api/navigator", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ uid: user.uid })
-            });
-
-            const decision = await res.json();
-
-            if (decision.error) {
-                alert("Navigator Error: " + decision.error);
-                return;
+            // 3. Launch Briefing
+            if (finalDecision) {
+                setBriefingRecommendation(finalDecision);
             }
-
-            if (decision.message === "All questions solved!") {
-                alert("You have solved everything! Great job!");
-                return;
-            }
-
-            // 3. Update Cache & Redirect
-            localStorage.setItem(CACHE_KEY, JSON.stringify(decision));
-            router.push(`/practice/${decision.questionId}`);
 
         } catch (error) {
             console.error("Navigator Error:", error);
@@ -409,6 +421,20 @@ export default function NavigatorPage() {
                     </motion.div>
                 </motion.div>
             </div>
+
+            {/* Mission Briefing Modal */}
+            <AnimatePresence>
+                {briefingRecommendation && (
+                    <MissionBriefingModal
+                        recommendation={briefingRecommendation}
+                        onClose={() => setBriefingRecommendation(null)}
+                        onLaunch={() => {
+                            setBriefingRecommendation(null);
+                            router.push(`/practice/${briefingRecommendation.id}`);
+                        }}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }

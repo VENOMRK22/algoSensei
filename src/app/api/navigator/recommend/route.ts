@@ -74,7 +74,10 @@ Output Format (JSON ONLY):
 {
   "questionId": "string",
   "actionType": "speedrun" | "remedial" | "lateral" | "next_step",
-  "reasoning": "string"
+  "trigger": "string (The specific observation that caused this, e.g. 'Solved < 5m', 'Failed 2x')",
+  "logic": "string (The algorithmic rule applied, e.g. 'Vertical Progression', 'Backtracking to Simpler Node')",
+  "treeContext": "string (The Tree and Branch name, e.g. 'Tree 1: Linear Solver > Branch A: Two Pointers')",
+  "reasoning": "string (A human-readable summary)"
 }
 `;
 
@@ -170,7 +173,10 @@ Select the best next question based on the logical scenarios. Return JSON only.
                 id: decision.questionId,
                 reason: decision.reasoning,
                 timestamp: Date.now(),
-                strategy: decision.actionType
+                strategy: decision.actionType,
+                trigger: decision.trigger,
+                logic: decision.logic,
+                treeContext: decision.treeContext
             }
         });
 

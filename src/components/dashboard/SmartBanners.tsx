@@ -9,6 +9,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { ALL_QUESTIONS } from "@/lib/allQuestions";
 import { Question } from "@/types/question";
+import MissionBriefingModal from "@/components/navigator/MissionBriefingModal";
 
 export default function SmartBanners() {
     const { user } = useAuth();
@@ -17,6 +18,9 @@ export default function SmartBanners() {
     const [lastActiveQuestion, setLastActiveQuestion] = useState<Question | null>(null);
     const [recommendedId, setRecommendedId] = useState<string | null>(null);
     const [navLoading, setNavLoading] = useState(false);
+
+    // Mission Briefing Modal State
+    const [briefingRecommendation, setBriefingRecommendation] = useState<{ id: string, reason: string, strategy?: string, timestamp: number, trigger?: string, logic?: string, treeContext?: string } | null>(null);
 
     // Fetch User Data
     useEffect(() => {
@@ -43,32 +47,53 @@ export default function SmartBanners() {
 
     // Handle Smart Navigation
     const handleNavigatorClick = async () => {
-        // ALWAYS fetch fresh for "Smart Start" to ensure AI adapts to any new data
-        // (Unless we want to rely on cache? User asked to "Smart Fetch... first")
-        setNavLoading(true);
-        try {
-            const res = await fetch("/api/navigator/recommend", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    userId: user?.uid,
-                    // No result/time passed - let API infer from DB history for "Resume" context
-                })
-            });
-            const decision = await res.json();
+        // Sticky Logic: Checks (1) Props/State or (2) API
+        let finalDecision: { id: string, reason: string, strategy?: string, timestamp: number, trigger?: string, logic?: string, treeContext?: string } | null = null;
 
-            if (decision.questionId) {
-                router.push(`/practice/${decision.questionId}`);
-            } else {
-                // If AI returns null (finished everything?), go to dashboard or generic
-                router.push("/dashboard");
+        // 1. Check Sticky State (Client-Side from Snapshot)
+        if (userData?.recommendedNextQuestion?.id && userData?.solvedQuestionIds && !userData.solvedQuestionIds.includes(userData.recommendedNextQuestion.id)) {
+            console.log("🧭 Using Active Recommendation:", userData.recommendedNextQuestion.id);
+            finalDecision = userData.recommendedNextQuestion;
+        }
+
+        // 2. If No Valid Sticky, Fetch Fresh
+        if (!finalDecision) {
+            setNavLoading(true);
+            try {
+                const res = await fetch("/api/navigator/recommend", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userId: user?.uid })
+                });
+                const decision = await res.json();
+
+                if (decision.questionId) {
+                    finalDecision = {
+                        id: decision.questionId,
+                        reason: decision.reasoning || "No reason provided.",
+                        strategy: decision.actionType,
+                        timestamp: Date.now(),
+                        trigger: decision.trigger,
+                        logic: decision.logic,
+                        treeContext: decision.treeContext
+                    };
+                } else {
+                    router.push("/dashboard");
+                    return;
+                }
+            } catch (e) {
+                console.error("Navigator Error:", e);
+                // Last ditch fallback
+                if (recommendedId) router.push(`/practice/${recommendedId}`);
+                return;
+            } finally {
+                setNavLoading(false);
             }
-        } catch (e) {
-            console.error("Navigator Error:", e);
-            // Fallback to cache or simple redirect
-            if (recommendedId) router.push(`/practice/${recommendedId}`);
-        } finally {
-            setNavLoading(false);
+        }
+
+        // 3. SHOW BRIEFING MODAL
+        if (finalDecision) {
+            setBriefingRecommendation(finalDecision);
         }
     };
 
@@ -266,6 +291,19 @@ export default function SmartBanners() {
                     </div>
                 </div>
             </motion.div>
+            {/* Mission Briefing Modal */}
+            <AnimatePresence>
+                {briefingRecommendation && (
+                    <MissionBriefingModal
+                        recommendation={briefingRecommendation}
+                        onClose={() => setBriefingRecommendation(null)}
+                        onLaunch={() => {
+                            setBriefingRecommendation(null);
+                            router.push(`/practice/${briefingRecommendation.id}`);
+                        }}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }
