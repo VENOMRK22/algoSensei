@@ -300,7 +300,7 @@ export default function TopicDetailsPage() {
                                 </button>
                             </Link>
 
-                            <Link href={`/practice/${selectedQuestion.id}`} className="block">
+                            <Link href={`/practice/${selectedQuestion.id}?mode=practice`} className="block">
                                 <button className="w-full p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/50 hover:scale-[1.02] transition-all flex items-center gap-4 group/btn">
                                     <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 group-hover/btn:bg-emerald-500 group-hover/btn:text-white transition-colors text-emerald-400">
                                         <Code size={24} />

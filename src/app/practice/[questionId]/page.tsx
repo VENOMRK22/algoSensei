@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { doc, getDoc, onSnapshot, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Question } from "@/types/question";
@@ -22,6 +22,8 @@ export default function PracticePage() {
     const { user } = useAuth();
     const { questionId } = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const mode = searchParams.get("mode");
 
     const [question, setQuestion] = useState<Question | null>(null);
     const [loading, setLoading] = useState(true);
@@ -35,7 +37,7 @@ export default function PracticePage() {
     // UI State
     const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
     const [showVictory, setShowVictory] = useState(false); // Victory State
-    const [showLobby, setShowLobby] = useState(true); // Initial Mode Selection
+    const [showLobby, setShowLobby] = useState(mode !== "practice"); // Initial Mode Selection - Skip if mode is pre-defined
 
     // AI State
     const [history, setHistory] = useState<any[]>([]);
