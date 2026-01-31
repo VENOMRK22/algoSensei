@@ -80,6 +80,15 @@ export function useViper(videoRef: any) {
                 let misbehaviorLevel = 0; // Initialize misbehaviorLevel
                 const blendshapes = results.faceBlendshapes?.[0];
 
+                // DEBUG LOGGING (Throttle to every ~60 frames or 1 sec)
+                if (Math.random() < 0.05) {
+                    console.log("🐍 VIPER DEBUG:", {
+                        score: currentScore,
+                        blendshapes: !!blendshapes,
+                        mood: viperState.currentMood
+                    });
+                }
+
                 // 1. Presence Check
                 if (!results.faceLandmarks || results.faceLandmarks.length === 0) {
                     absent = true;

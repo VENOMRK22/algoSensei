@@ -35,7 +35,7 @@ export default function ConfidenceCamera({ onConfidenceUpdate }: ConfidenceCamer
         <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="fixed bottom-6 right-6 w-48 z-50 group"
+            className="fixed top-24 left-6 w-72 z-50 group"
         >
             {/* Main Container */}
             <div className={`relative rounded-2xl overflow-hidden bg-black border transition-colors duration-500 ${getScoreColor(confidenceScore).split(' ')[1]} shadow-2xl`}>
@@ -46,7 +46,7 @@ export default function ConfidenceCamera({ onConfidenceUpdate }: ConfidenceCamer
                     audio={false}
                     mirrored={true}
                     screenshotFormat="image/jpeg"
-                    className="w-full h-32 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                    className="w-full h-48 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                 />
 
                 {/* Score Overlay */}
@@ -91,9 +91,16 @@ export default function ConfidenceCamera({ onConfidenceUpdate }: ConfidenceCamer
                 </AnimatePresence>
             </div>
 
-            {/* Label */}
-            <div className="text-right mt-1">
-                <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Viper Vision Active</span>
+            {/* Label & Mood */}
+            <div className="flex justify-between items-center mt-1 px-1">
+                <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Viper V2</span>
+                <span className={`text-[9px] uppercase tracking-widest font-bold ${currentMood === 'Stressed' ? 'text-amber-500' :
+                    currentMood === 'Confident' ? 'text-emerald-500' :
+                        currentMood === 'Distracted' ? 'text-red-500' :
+                            currentMood === 'Misbehaving' ? 'text-pink-500' : 'text-slate-500'
+                    }`}>
+                    {currentMood}
+                </span>
             </div>
         </motion.div>
     );
