@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft, CheckCircle, Circle, Play, Lock, Cpu, Sparkles, X, FileText, Code } from "lucide-react";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Question } from "@/types/question";
-import { ArrowLeft, CheckCircle, Circle, Play, Lock, Cpu, Sparkles } from "lucide-react";
+import SystemAuditModal from "@/components/workspace/SystemAuditModal";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { TechGridBackground } from "@/components/ui/tech-grid-background";
@@ -44,6 +45,9 @@ export default function TopicDetailsPage() {
     const [loading, setLoading] = useState(true);
     const [topicName, setTopicName] = useState<string>("");
     const [solvedIds, setSolvedIds] = useState<string[]>([]);
+    const [attempts, setAttempts] = useState<Record<string, any>>({});
+    const [selectedReport, setSelectedReport] = useState<any | null>(null);
+    const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
 
     useEffect(() => {
         if (!slug) return;
@@ -76,6 +80,14 @@ export default function TopicDetailsPage() {
                     if (userDoc.exists()) {
                         setSolvedIds(userDoc.data().solvedQuestionIds || []);
                     }
+
+                    // Fetch Attempts (History)
+                    const attemptsSnapshot = await getDocs(collection(db, "users", user.uid, "attempts"));
+                    const attemptsMap: Record<string, any> = {};
+                    attemptsSnapshot.forEach(doc => {
+                        attemptsMap[doc.id] = doc.data();
+                    });
+                    setAttempts(attemptsMap);
                 }
 
             } catch (error) {
@@ -176,18 +188,39 @@ export default function TopicDetailsPage() {
                                     >
                                         {/* Top Row: Status & Difficulty */}
                                         <div className="flex items-start justify-between">
+                                            {/* Circle Check or Status */}
                                             <div className="flex items-center gap-3">
-                                                {/* Circle Check */}
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${isSolved ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-white/20'}`}>
-                                                    {isSolved ? <CheckCircle size={16} /> : <Circle size={16} />}
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${isSolved ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' :
+                                                    attempts[q.id]?.verdict === 'NO HIRE' ? 'bg-red-500/20 border-red-500 text-red-400' :
+                                                        'bg-white/5 border-white/10 text-white/20'
+                                                    }`}>
+                                                    {isSolved ? <CheckCircle size={16} /> :
+                                                        attempts[q.id]?.verdict === 'NO HIRE' ? <X size={16} /> :
+                                                            <Circle size={16} />}
                                                 </div>
                                             </div>
-                                            <span className={`text-[10px] px-2 py-1 rounded bg-black/40 border uppercase tracking-wider font-bold ${q.difficulty === 'Easy' ? 'border-emerald-500/30 text-emerald-400' :
-                                                q.difficulty === 'Medium' ? 'border-yellow-500/30 text-yellow-400' :
-                                                    'border-red-500/30 text-red-400'
-                                                }`}>
-                                                {q.difficulty}
-                                            </span>
+
+                                            {/* Difficulty Badge (ALWAYS VISIBLE) */}
+                                            <div className="flex flex-col items-end gap-1">
+                                                <span className={`text-[10px] px-2 py-1 rounded bg-black/40 border uppercase tracking-wider font-bold ${q.difficulty === 'Easy' ? 'border-emerald-500/30 text-emerald-400' :
+                                                    q.difficulty === 'Medium' ? 'border-yellow-500/30 text-yellow-400' :
+                                                        'border-red-500/30 text-red-400'
+                                                    }`}>
+                                                    {q.difficulty}
+                                                </span>
+
+                                                {/* Small Score Indicators (Optional - Keeping for context but removing big Verdict text) */}
+                                                {attempts[q.id] && (
+                                                    <div className="flex gap-1">
+                                                        <span className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded text-white/60" title="Communication">
+                                                            🗣️ {attempts[q.id].communication_score}
+                                                        </span>
+                                                        <span className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded text-white/60" title="Technical">
+                                                            💻 {attempts[q.id].technical_accuracy}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* Title */}
@@ -208,11 +241,27 @@ export default function TopicDetailsPage() {
                                                 )}
                                             </div>
 
-                                            <Link href={`/practice/${q.id}`}>
-                                                <button className="flex items-center justify-center w-10 h-10 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white transition-all shadow-[0_0_10px_rgba(249,115,22,0.0)] hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]">
+                                            <div className="flex items-center gap-2">
+                                                {attempts[q.id] && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedReport(attempts[q.id]);
+                                                        }}
+                                                        className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white transition-all border border-white/5 hover:border-white/20"
+                                                        title="View Report"
+                                                    >
+                                                        <FileText size={16} />
+                                                    </button>
+                                                )}
+
+                                                <button
+                                                    onClick={() => setSelectedQuestion(q)}
+                                                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white transition-all shadow-[0_0_10px_rgba(249,115,22,0.0)] hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]"
+                                                >
                                                     <Play size={16} fill="currentColor" />
                                                 </button>
-                                            </Link>
+                                            </div>
                                         </div>
                                     </motion.div>
                                 );
@@ -220,7 +269,64 @@ export default function TopicDetailsPage() {
                         </div>
                     )}
                 </motion.div>
-            </div>
-        </div>
+            </div >
+            {/* Mode Selection Modal */}
+            {selectedQuestion && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm"
+                    onClick={() => setSelectedQuestion(null)}
+                >
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-[#0A0A0A] border border-white/10 p-8 rounded-3xl max-w-md w-full shadow-2xl relative overflow-hidden group"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-500 to-transparent opacity-50" />
+
+                        <h2 className="text-2xl font-bold text-white mb-2 font-mono">{selectedQuestion.title}</h2>
+                        <p className="text-white/40 text-sm mb-8">Select your engagement protocol.</p>
+
+                        <div className="grid grid-cols-1 gap-4">
+                            <Link href={`/interview/${selectedQuestion.id}`} className="block">
+                                <button className="w-full p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-orange-500/10 hover:border-orange-500/50 hover:scale-[1.02] transition-all flex items-center gap-4 group/btn">
+                                    <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center border border-orange-500/30 group-hover/btn:bg-orange-500 group-hover/btn:text-white transition-colors text-orange-400">
+                                        <Sparkles size={24} />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="text-white font-bold text-lg group-hover/btn:text-orange-400 transition-colors">AI Interview</div>
+                                        <div className="text-white/40 text-xs">Voice & Video • Real-time Feedback</div>
+                                    </div>
+                                </button>
+                            </Link>
+
+                            <Link href={`/practice/${selectedQuestion.id}`} className="block">
+                                <button className="w-full p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/50 hover:scale-[1.02] transition-all flex items-center gap-4 group/btn">
+                                    <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 group-hover/btn:bg-emerald-500 group-hover/btn:text-white transition-colors text-emerald-400">
+                                        <Code size={24} />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="text-white font-bold text-lg group-hover/btn:text-emerald-400 transition-colors">Code Practice</div>
+                                        <div className="text-white/40 text-xs">IDE Only • Self-Coded Solutions</div>
+                                    </div>
+                                </button>
+                            </Link>
+                        </div>
+
+                        <button
+                            onClick={() => setSelectedQuestion(null)}
+                            className="absolute top-4 right-4 p-2 text-white/20 hover:text-white transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+                    </motion.div>
+                </div>
+            )}
+
+            <SystemAuditModal
+                feedback={selectedReport}
+                onClose={() => setSelectedReport(null)}
+            />
+        </div >
     );
 }

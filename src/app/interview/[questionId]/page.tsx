@@ -3,12 +3,14 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, Square, Code, MessageSquare, Send, Keyboard, Mic as MicIcon } from "lucide-react";
+import { Mic, Square, Code, MessageSquare, Send, Keyboard, Mic as MicIcon, Sparkles } from "lucide-react";
 import { useInterviewLogic, InterviewMode } from "@/hooks/useInterviewLogic";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
 import CodeEditor from "@/components/workspace/CodeEditor";
 import ConfidenceCamera from "@/components/workspace/ConfidenceCamera";
+import SystemAuditModal from "@/components/workspace/SystemAuditModal";
 import { X } from "lucide-react";
 
 export default function InterviewPage() {
@@ -20,15 +22,18 @@ export default function InterviewPage() {
     const [language, setLanguage] = useState<"javascript" | "python" | "java">("javascript");
     const [showEditor, setShowEditor] = useState(false);
 
+    const { user } = useAuth(); // Auth context
+
     // logic hook
     const {
         mode, setMode, messages, processing, sendMessage,
         isListening, isSpeaking, transcript, startListening, stopListening, hasBrowserSupport, error: voiceError,
         endInterview, feedback, updateViperStats
-    } = useInterviewLogic(questionTitle, code);
+    } = useInterviewLogic(questionId as string, questionTitle, code, user?.uid || null);
 
     const [inputText, setInputText] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [showAnalysis, setShowAnalysis] = useState<'communication' | 'technical' | null>(null);
 
     // Fetch Question
     useEffect(() => {
@@ -142,65 +147,9 @@ export default function InterviewPage() {
             <div className="flex-1 w-full max-w-3xl relative flex flex-col z-10">
 
                 {/* FEEDBACK OVERLAY - SYSTEM AUDIT REPORT */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-[#050B14]/90 backdrop-blur-xl"
-                        >
-                            <div className="w-full max-w-2xl bg-slate-900/80 border border-white/10 rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-full">
-                                <div className="text-center mb-8">
-                                    <span className="text-xs font-bold tracking-[0.3em] text-slate-500 uppercase">System Audit Complete</span>
-                                    <h2 className={`text-4xl font-extrabold mt-2 tracking-tight ${feedback.verdict === 'HIRE' ? 'text-emerald-400' : 'text-red-500'}`}>
-                                        {feedback.verdict}
-                                    </h2>
-                                </div>
+                <SystemAuditModal feedback={feedback} onClose={() => { }} showReturnButton={true} />
 
-                                <div className="grid grid-cols-2 gap-4 mb-8">
-                                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5 text-center">
-                                        <div className="text-3xl font-bold text-white mb-1">{feedback.communication_score}/10</div>
-                                        <div className="text-xs font-bold tracking-wider text-slate-500 uppercase">Communication</div>
-                                    </div>
-                                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5 text-center">
-                                        <div className="text-3xl font-bold text-white mb-1">{feedback.technical_accuracy}/10</div>
-                                        <div className="text-xs font-bold tracking-wider text-slate-500 uppercase">Technical</div>
-                                    </div>
-                                </div>
 
-                                <div className="space-y-6">
-                                    <div>
-                                        <h3 className="text-xs font-bold tracking-wider text-cyan-500 uppercase mb-2">Executive Summary</h3>
-                                        <p className="text-slate-300 leading-relaxed text-sm">
-                                            "{feedback.summary}"
-                                        </p>
-                                    </div>
-
-                                    {feedback.red_flags && feedback.red_flags.length > 0 && (
-                                        <div>
-                                            <h3 className="text-xs font-bold tracking-wider text-red-400 uppercase mb-2">Detected Issues</h3>
-                                            <ul className="space-y-2">
-                                                {feedback.red_flags.map((flag: string, i: number) => (
-                                                    <li key={i} className="flex items-start gap-2 text-sm text-slate-400">
-                                                        <span className="mt-1.5 w-1 h-1 rounded-full bg-red-500 flex-shrink-0" />
-                                                        {flag}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <button
-                                    onClick={() => router.push('/dashboard')}
-                                    className="w-full mt-8 py-4 bg-white text-black font-bold rounded-xl hover:bg-slate-200 transition-colors uppercase tracking-widest text-sm"
-                                >
-                                    Return to HQ
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
 
                 {/* Voice Mode Visuals - The "Jarvis Core" */}
                 <AnimatePresence mode="wait">

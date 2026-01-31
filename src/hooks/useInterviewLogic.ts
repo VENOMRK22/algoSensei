@@ -61,7 +61,10 @@ function sanitizeTranscript(text: string): string {
     return clean; // Returns text with fixed technical casing/spelling
 }
 
-export function useInterviewLogic(questionTitle: string, code: string = "") {
+import { doc, setDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+export function useInterviewLogic(questionId: string, questionTitle: string, code: string = "", userId: string | null = null) {
     const {
         isListening,
         isSpeaking,
@@ -85,10 +88,16 @@ export function useInterviewLogic(questionTitle: string, code: string = "") {
 
     // 🐍 Viper Data Ref (No Re-render needed for logic, we just read it on send)
     const viperRef = useRef<ViperData>({ score: 100, issues: [] });
+    const confidenceHistoryRef = useRef<number[]>([]);
 
     // Function for UI to update Viper stats
     const updateViperStats = (score: number, issues: string[]) => {
         viperRef.current = { score, issues };
+
+        // Sample every ~5 seconds to avoid array bloating (called every frame by UI)
+        if (Math.random() < 0.05) {
+            confidenceHistoryRef.current.push(score);
+        }
     };
 
     // 👁️ Hawkeye: 60s Code Snapshot Timer
@@ -135,44 +144,58 @@ export function useInterviewLogic(questionTitle: string, code: string = "") {
                         isSystemCommand,
                         interviewState, // 🧠 Inject the Brain State
                         codeSnapshot: isSystemCommand && text.startsWith(":::SNAPSHOT:::") ? text : null, // 👁️ Hawkeye Context
-                        viper: viperRef.current // 🐍 Viper Context
+                        viper: viperRef.current, // 🐍 Viper Context (Current Snapshot)
+                        averageConfidence: Math.round(confidenceHistoryRef.current.reduce((a, b) => a + b, 0) / (confidenceHistoryRef.current.length || 1)) // 📊 Average Confidence
                     }
                 })
             });
             const data = await res.json();
 
-            if (data.reply) {
-                // 🧠 State Update from AI
-                if (data.action) {
-                    console.log("🧠 AI Action:", data.action);
-                    setInterviewState(prev => ({ ...prev, ...data.action }));
-                }
+            if (data.verdict) {
+                setFeedback(data.verdict);
+                speak(data.reply || "Interview complete. I have generated your performance audit.");
 
-                // Check if reply is the JSON verdict
-                let isVerdict = false;
-                let parsedVerdict = null;
-                try {
-                    const cleanReply = data.reply;
-                    // Fix: Regex to find the first valid JSON object block { ... }
-                    // This handles markdown ```json, prefixes, suffixes, etc.
-                    const jsonMatch = cleanReply.match(/\{[\s\S]*\}/);
-
-                    if (jsonMatch) {
-                        const jsonString = jsonMatch[0];
-                        parsedVerdict = JSON.parse(jsonString);
-                        if (parsedVerdict.verdict && parsedVerdict.communication_score) isVerdict = true;
-                    }
-                } catch (e) {
-                    console.warn("JSON Parse Attempt Failed:", e);
-                }
-
-                if (isVerdict && parsedVerdict) {
-                    setFeedback(parsedVerdict);
-                    speak("Interview complete. I have generated your performance audit.");
-                } else {
+                // If there's meaningful intro text (e.g. "I'm stopping..."), show it.
+                // WE MUST CHECK if 'data.reply' is actually empty/whitespace to avoid empty bubbles
+                if (data.reply && data.reply.trim().length > 0) {
                     setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
-                    speak(data.reply);
                 }
+
+                // 💾 Save Verdict to History (Overwrite previous attempt)
+                if (userId && questionId) {
+                    try {
+                        const attemptRef = doc(db, "users", userId, "attempts", questionId);
+                        await setDoc(attemptRef, {
+                            ...data.verdict,
+                            questionTitle,
+                            questionId,
+                            timestamp: new Date().toISOString(),
+                            succeeded: data.verdict.verdict === "HIRE"
+                        });
+
+                        // Also update the simple 'solved' list if HIRE
+                        if (data.verdict.verdict === "HIRE") {
+                            const userRef = doc(db, "users", userId);
+                            await updateDoc(userRef, {
+                                solvedQuestionIds: arrayUnion(questionId)
+                            });
+                        }
+                    } catch (err) {
+                        console.error("Failed to save interview attempt:", err);
+                    }
+                }
+
+                return;
+            }
+
+            if (data.action) {
+                console.log("🧠 AI Action:", data.action);
+                setInterviewState(prev => ({ ...prev, ...data.action }));
+            }
+
+            if (data.reply) {
+                setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
+                speak(data.reply);
             }
         } catch (e) {
             console.error("Interview API Error:", e);
