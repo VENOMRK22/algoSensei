@@ -8,6 +8,7 @@ export interface UserStats {
     solved: number;
     streak: number;
     level: string;
+    lastRankUpdate?: number; // Timestamp for cache validation
 }
 
 interface StatItemProps {

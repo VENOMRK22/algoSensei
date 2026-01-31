@@ -49,6 +49,7 @@ export default function ProfilePage() {
     // Stats & Skills State
     const [stats, setStats] = useState<UserStats | undefined>(undefined);
     const [skills, setSkills] = useState<UserSkills | undefined>(undefined);
+    const [rankLoading, setRankLoading] = useState(false);
 
     // Load User Data
     useEffect(() => {
@@ -78,6 +79,44 @@ export default function ProfilePage() {
         if (user) fetchUserData();
         else router.push("/login");
     }, [user, router]);
+
+    // Fetch rankings from API
+    useEffect(() => {
+        const fetchRankings = async () => {
+            if (!user?.uid) return;
+            
+            // Check if we already have recent rank data
+            if (stats?.rank && stats?.lastRankUpdate) {
+                const age = Date.now() - stats.lastRankUpdate;
+                if (age < 3600000) return; // Less than 1 hour old, skip
+            }
+
+            setRankLoading(true);
+            try {
+                const response = await fetch(`/api/rankings?uid=${user.uid}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    // Update stats with new rank
+                    setStats(prev => ({
+                        ...prev,
+                        rank: data.rank,
+                        solved: prev?.solved || 0,
+                        streak: prev?.streak || 0,
+                        level: prev?.level || `v${process.env.NEXT_PUBLIC_APP_VERSION}`,
+                    }));
+                }
+            } catch (error) {
+                console.error("Error fetching rankings:", error);
+            } finally {
+                setRankLoading(false);
+            }
+        };
+
+        // Only fetch if we have user data loaded
+        if (user && !loading) {
+            fetchRankings();
+        }
+    }, [user, loading]);
 
     const handleSave = async () => {
         if (!user || user.uid === undefined) return;

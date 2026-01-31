@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Play, CheckCircle, Sparkles, Terminal, X, ChevronUp, ChevronDown, Lightbulb } from "lucide-react";
 import { formatCodeForExecution } from "@/lib/codeRunner";
 import { updateUserProgress } from "@/lib/firebase";
+import { updateUserStats } from "@/lib/gamification";
 import { useAuth } from "@/context/AuthContext";
 import confetti from "canvas-confetti";
 import { useParams } from "next/navigation";
@@ -233,6 +234,8 @@ export default function EditorFooter({ code, language, difficulty, questionTitle
             if (user?.uid && currentQuestionId) {
                 try {
                     await updateUserProgress(user.uid, currentQuestionId, difficulty, questionTitle, category);
+                    // Update user stats (solved count, level)
+                    await updateUserStats(user.uid);
                 } catch (e) {
                     console.error("Failed to save progress", e);
                 }

@@ -1,5 +1,7 @@
 
 import { Difficulty } from "@/types/question";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 export const XP_REWARDS = {
     Easy: 20,
@@ -59,5 +61,34 @@ export const calculateLevel = (totalXP: number): LevelProgress => {
 
         xp -= cap;
         level++;
+    }
+};
+
+/**
+ * Update user stats after solving a problem
+ * This function should be called after updateUserProgress
+ */
+export const updateUserStats = async (userId: string) => {
+    try {
+        const userRef = doc(db, "users", userId);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+            console.error("User not found:", userId);
+            return;
+        }
+
+        const userData = userSnap.data();
+        const solvedCount = userData.solvedQuestionIds?.length || 0;
+
+        // Update stats (rank will be calculated on-demand via API)
+        await updateDoc(userRef, {
+            "stats.solved": solvedCount,
+            "stats.level": `v${process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0"}`,
+            // Note: rank is updated via /api/rankings endpoint
+            // Note: streak tracking can be added later
+        });
+    } catch (error) {
+        console.error("Error updating user stats:", error);
     }
 };
