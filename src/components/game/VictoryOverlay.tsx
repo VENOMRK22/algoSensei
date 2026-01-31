@@ -15,6 +15,7 @@ interface VictoryOverlayProps {
     onClose?: () => void;
     userId: string;
     topicId?: string;
+    elapsedTime?: number; // Time in seconds
 }
 
 export default function VictoryOverlay({
@@ -24,7 +25,8 @@ export default function VictoryOverlay({
     currentXP,
     onClose,
     userId,
-    topicId
+    topicId,
+    elapsedTime
 }: VictoryOverlayProps) {
     const router = useRouter();
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
@@ -230,11 +232,19 @@ export default function VictoryOverlay({
                                     </div>
 
                                     {/* XP STATS GRID */}
-                                    <div className="grid grid-cols-2 gap-4 w-full">
+                                    <div className="grid grid-cols-3 gap-4 w-full">
                                         <div className="bg-slate-900/50 border border-white/10 rounded-xl p-4 flex flex-col items-center">
                                             <div className="text-[10px] text-slate-400 uppercase tracking-widest mb-1">XP Gained</div>
                                             <div className="text-3xl font-bold text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">+{xpEarned}</div>
                                         </div>
+                                        {elapsedTime !== undefined && (
+                                            <div className="bg-slate-900/50 border border-white/10 rounded-xl p-4 flex flex-col items-center">
+                                                <div className="text-[10px] text-slate-400 uppercase tracking-widest mb-1">Time Taken</div>
+                                                <div className="text-2xl font-bold text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]">
+                                                    {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="bg-slate-900/50 border border-white/10 rounded-xl p-4 flex flex-col items-center">
                                             <div className="text-[10px] text-slate-400 uppercase tracking-widest mb-1">Current Level</div>
                                             <div className="text-3xl font-bold text-white">LVL.{currentLevel}</div>

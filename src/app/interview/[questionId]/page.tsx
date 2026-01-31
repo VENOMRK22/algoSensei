@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, Square, Code, MessageSquare, Send, Keyboard, Mic as MicIcon, Sparkles } from "lucide-react";
+import { Mic, Square, Code, MessageSquare, Send, Keyboard, Mic as MicIcon, ArrowLeft, Sparkles } from "lucide-react";
 import { useInterviewLogic, InterviewMode } from "@/hooks/useInterviewLogic";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -70,12 +70,24 @@ export default function InterviewPage() {
 
             {/* Header */}
             <div className="z-20 w-full max-w-4xl p-6 flex items-center justify-between backdrop-blur-md bg-[#050B14]/80 border-b border-white/5 sticky top-0 rounded-b-3xl">
-                <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                        <span className="text-cyan-500 text-[10px] font-bold tracking-[0.2em] uppercase">System Active</span>
+                <div className="flex items-center gap-4">
+                    {/* Back Button */}
+                    <button
+                        onClick={() => router.push('/dashboard')}
+                        className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/50 border border-white/10 hover:border-cyan-500/30 hover:bg-cyan-950/30 transition-all"
+                        title="Back to Dashboard"
+                    >
+                        <ArrowLeft size={16} className="text-slate-400 group-hover:text-cyan-400 transition-colors" />
+                        <span className="text-sm font-medium text-slate-400 group-hover:text-cyan-400 transition-colors">Back</span>
+                    </button>
+
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                            <span className="text-cyan-500 text-[10px] font-bold tracking-[0.2em] uppercase">System Active</span>
+                        </div>
+                        <h1 className="text-xl font-bold text-slate-200 tracking-tight">{questionTitle}</h1>
                     </div>
-                    <h1 className="text-xl font-bold text-slate-200 tracking-tight">{questionTitle}</h1>
                 </div>
 
                 {/* Mode Toggle - Sleek Segmented Control */}

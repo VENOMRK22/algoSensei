@@ -17,6 +17,7 @@ import VictoryOverlay from "@/components/game/VictoryOverlay";
 import { useAuth } from "@/context/AuthContext";
 import { TOPIC_ID_TO_CATEGORY } from "@/lib/allQuestions";
 import { getXPForDifficulty } from "@/lib/gamification";
+import Timer from "@/components/workspace/Timer";
 
 export default function PracticePage() {
     const { user } = useAuth();
@@ -44,6 +45,8 @@ export default function PracticePage() {
     const [aiLoading, setAiLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<"problem" | "ai">("problem");
     const [hasUnreadAi, setHasUnreadAi] = useState(false); // Red Dot State
+    const [hasStartedTyping, setHasStartedTyping] = useState(false); // Track first keystroke
+    const timerRef = useRef<any>(null);
 
     // Fetch User XP (Real-time)
     useEffect(() => {
@@ -202,7 +205,15 @@ export default function PracticePage() {
                     <ResizablePanel defaultSize={40} minSize={20}>
                         <div className="flex flex-col h-full relative">
                             {/* Tabs Switcher for Left Panel */}
-                            <div className="absolute top-4 right-6 z-10 flex bg-slate-900/80 p-1 rounded-lg backdrop-blur-sm border border-white/5 shadow-lg">
+                            <div className="absolute top-4 right-6 z-10 flex items-center gap-3">
+                                {/* Timer Component */}
+                                <Timer 
+                                    questionId={questionId as string}
+                                    onTimerStart={() => console.log("Timer started")}
+                                    onTimerStop={(elapsed) => console.log("Timer stopped:", elapsed)}
+                                />
+                                
+                                <div className="flex bg-slate-900/80 p-1 rounded-lg backdrop-blur-sm border border-white/5 shadow-lg">
                                 <button
                                     onClick={() => setActiveTab("problem")}
                                     className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'problem' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
@@ -227,6 +238,7 @@ export default function PracticePage() {
                                     )}
                                 </button>
                             </div>
+                        </div>
 
                             {activeTab === "problem" ? (
                                 <ProblemDescription question={question} />
@@ -254,6 +266,7 @@ export default function PracticePage() {
                                     setLanguage={setLanguage}
                                     code={code}
                                     setCode={setCode}
+                                    onFirstKeystroke={() => setHasStartedTyping(true)}
                                 />
                             </div>
 
@@ -289,6 +302,7 @@ export default function PracticePage() {
                 userId={user?.uid || ""}
                 onClose={() => setShowVictory(false)}
                 topicId={question ? Object.keys(TOPIC_ID_TO_CATEGORY).find(key => TOPIC_ID_TO_CATEGORY[key] === question.category) : undefined}
+                elapsedTime={(window as any).timerControl?.getElapsed?.()}
             />
 
             {/* Pre-Lobby / Mode Selection Modal */}

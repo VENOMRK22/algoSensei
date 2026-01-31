@@ -10,10 +10,12 @@ interface CodeEditorProps {
     setLanguage: (lang: "javascript" | "python" | "java") => void;
     code: string;
     setCode: (code: string) => void;
+    onFirstKeystroke?: () => void; // Callback for first keystroke
 }
 
-export default function CodeEditor({ question, language, setLanguage, code, setCode }: CodeEditorProps) {
+export default function CodeEditor({ question, language, setLanguage, code, setCode, onFirstKeystroke }: CodeEditorProps) {
     const editorRef = useRef<any>(null);
+    const hasTypedRef = useRef(false); // Track if user has typed
 
     const handleEditorDidMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
@@ -69,7 +71,17 @@ export default function CodeEditor({ question, language, setLanguage, code, setC
                     theme="vs-dark"
                     language={language}
                     value={code}
-                    onChange={(value) => setCode(value || "")}
+                    onChange={(value) => {
+                        setCode(value || "");
+                        // Trigger timer on first keystroke
+                        if (!hasTypedRef.current && value !== code && onFirstKeystroke) {
+                            hasTypedRef.current = true;
+                            if ((window as any).timerControl) {
+                                (window as any).timerControl.start();
+                            }
+                            onFirstKeystroke();
+                        }
+                    }}
                     onMount={handleEditorDidMount}
                     options={{
                         minimap: { enabled: true },

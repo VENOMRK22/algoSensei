@@ -205,8 +205,24 @@ export default function EditorFooter({ code, language, difficulty, questionTitle
         }
 
         if (allPassed) {
+            // Stop the timer and get elapsed time
+            let timeMessage = "";
+            if ((window as any).timerControl) {
+                const elapsedSeconds = (window as any).timerControl.getElapsed();
+                (window as any).timerControl.stop();
+                
+                // Format time for display
+                const mins = Math.floor(elapsedSeconds / 60);
+                const secs = elapsedSeconds % 60;
+                const timeFormatted = mins > 0 
+                    ? `${mins}m ${secs}s`
+                    : `${secs}s`;
+                
+                timeMessage = `\n⏱️  Time: ${timeFormatted}`;
+            }
+
             setOutput(prev => ({
-                stdout: (prev?.stdout || "") + "\n🎉 ALL TEST CASES PASSED! 🎉\n",
+                stdout: (prev?.stdout || "") + `\n🎉 ALL TEST CASES PASSED! 🎉${timeMessage}\n`,
                 stderr: prev?.stderr || ""
             }));
 
