@@ -33,9 +33,13 @@ export default function ConfidenceCamera({ onConfidenceUpdate }: ConfidenceCamer
 
     return (
         <motion.div
+            drag
+            dragMomentum={false}
+            whileHover={{ scale: 1.02 }}
+            whileDrag={{ scale: 1.05, cursor: "grabbing" }}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="fixed top-24 left-6 w-72 z-50 group"
+            className="fixed top-24 left-6 w-72 z-50 group cursor-grab active:cursor-grabbing"
         >
             {/* Main Container */}
             <div className={`relative rounded-2xl overflow-hidden bg-black border transition-colors duration-500 ${getScoreColor(confidenceScore).split(' ')[1]} shadow-2xl`}>

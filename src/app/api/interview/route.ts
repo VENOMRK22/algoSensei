@@ -56,8 +56,8 @@ Use the conversation history to determine which stage you are in.
         "verdict": "HIRE" | "NO HIRE",
         "summary": "One sentence professional summary."
       }
-    -   CRITICAL: Do NOT output markdown ticks.Do NOT output "Here is the verdict".JUST THE RAW JSON.
-    - Do not output anything else. Just the JSON.
+    -   CRITICAL: Do NOT output markdown ticks (\`\`\`json). Do NOT output "Here is the verdict". JUST THE RAW JSON string.
+    -   Do not output anything else. Just the JSON.
 
 ** CONVERSATION STYLE:**
 -   ** Tone:** Professional, Clinical, slightly Intimidating but Fair.Natural, not robotic.
@@ -81,28 +81,28 @@ export async function POST(req: Request) {
 
         // 🐍 Viper Logic: Analyze Confidence & Behavior
         let viperContext = `
-            === VIPER VISION (LONG TERM STATS) ===
+        === VIPER VISION(LONG TERM STATS) ===
             Average Confidence Score: ${averageConfidence}/100
             
             SCORING RULES:
-            1. Communication Score is PRIMARILY based on verbal clarity, fluency, and articulation.
+1. Communication Score is PRIMARILY based on verbal clarity, fluency, and articulation.
             2. Viper Score is a SECONDARY modifier.
                - If < 60: PENALIZE the score.
                - If > 90: Small bonus.
-            
-            CRITICAL: COMMUNICATION ANALYSIS MUST BE GRANULAR.
+
+    CRITICAL: COMMUNICATION ANALYSIS MUST BE GRANULAR.
             - Analyze the transcript for SPEECH PATTERNS:
-              * Filler words ("um", "uh", "hmm", "like") -> If frequent, listed in 'communication_improvements' as "Reduce filler words".
-              * Repetition ("stopping again again") -> List as "Avoid unnecessary repetition".
+              * Filler words("um", "uh", "hmm", "like") -> If frequent, listed in 'communication_improvements' as "Reduce filler words".
+              * Repetition("stopping again again") -> List as "Avoid unnecessary repetition".
               * Vocabulary -> If they use "thingy" or "stuff" instead of technical terms, list "Use precise technical vocabulary".
               * Fluency -> If sentences run on or make no sense, list "Improve sentence coherence".
-            - Do NOT give generic advice like "Be more confident". BE SPECIFIC about what they said wrong.
+            - Do NOT give generic advice like "Be more confident".BE SPECIFIC about what they said wrong.
         `;
 
         if (viperData.score < 50 || viperData.issues.length > 0) {
             viperContext += `
-            === VIPER VISION (LIVE SNAPSHOT) ===
-            Current Score: ${viperData.score}/100
+    === VIPER VISION(LIVE SNAPSHOT) ===
+        Current Score: ${viperData.score}/100
             Detected Issues: ${viperData.issues.join(", ")}
 
 INSTRUCTION:
@@ -165,88 +165,57 @@ INSTRUCTION:
 
         // 🧠 Robust Parsing: Scan for nested JSON blocks (Actions or Verdicts)
         try {
-            // Regex to find ANY valid JSON object structure specifically containing "verdict" or "action" keys
-            // This is a naive but effective recursive-like pattern for single-level nested objects which is usually what LLMs output.
-            const jsonRegex = /{(?:[^{}]|{[^{}]*})*"(?:verdict|action|technical_accuracy|communication_score)"(?:[^{}]|{[^{}]*})*}[\s\S]*?$/;
+            // 1. Pre-cleaning: Remove potential markdown wrapping
+            let cleanReply = reply.trim();
+            // Remove markdown code blocks (standard ```json and ```)
+            cleanReply = cleanReply.replace(/^```json\s*/i, "").replace(/^```\s*/, "").replace(/\s*```$/, "");
 
-            // Search for the LAST occurrence if multiple, as the verdict usually comes at the end.
-            const matches = reply.match(new RegExp(jsonRegex, 'g'));
+            // 2. Locate JSON Object (First '{' to Last '}')
+            const start = cleanReply.indexOf('{');
+            const end = cleanReply.lastIndexOf('}');
 
-            if (matches && matches.length > 0) {
-                const jsonStr = matches[matches.length - 1];
-                let jsonBlob;
+            if (start !== -1 && end > start) {
+                const jsonStr = cleanReply.substring(start, end + 1);
 
                 try {
-                    jsonBlob = JSON.parse(jsonStr);
-                } catch (jsonErr) {
-                    console.warn("JSON Parse Failed, attempting repair...", jsonStr);
-                    // Simple repair: if it ends uniquely, try adding '}'
-                    try {
-                        jsonBlob = JSON.parse(jsonStr + "}");
-                    } catch (e2) {
-                        // If repair fails, we STILL want to clean the chat
-                        if (jsonStr.includes("verdict") || jsonStr.includes("communication_score")) {
-                            console.log("Verdict detected but malformed. Silencing chat.");
-                            reply = "";
-                            verdict = { verdict: "NO HIRE", communication_score: 1, technical_accuracy: 1, summary: "Audit Error", red_flags: ["Malformed JSON"] };
-                        } else if (jsonStr.includes("action") || jsonStr.includes('stage":')) {
-                            console.log("Action raw JSON detected. Stripping text.");
-                            reply = reply.replace(jsonStr, "").trim();
-                        }
-                    }
-                }
+                    let jsonBlob = JSON.parse(jsonStr);
 
-                if (jsonBlob) {
-                    // Case 1: Verdict (Detected either by 'verdict' key OR 'communication_score' presence)
+                    // Case 1: Verdict (Detected by schema)
                     if (jsonBlob.verdict || jsonBlob.communication_score) {
-                        // Ensure verdict logic runs even if 'verdict' key is missing but others are present
-                        if (!jsonBlob.verdict) jsonBlob.verdict = "NO HIRE"; // Default fallback if missing
-
+                        if (!jsonBlob.verdict) jsonBlob.verdict = "NO HIRE";
                         verdict = jsonBlob;
-                        reply = ""; // 🤫 FORCE SILENCE. No "I think we're done..." text.
+                        reply = ""; // Silence the chat
                     }
-                    // Case 2: Action only
+                    // Case 2: Action (Detected by schema)
                     else if (jsonBlob.action) {
                         action = jsonBlob.action;
-                        // For actions, we just strip the JSON string from the reply
+                        // For actions, we just strip the JSON string from the visible reply
+                        // We use the original reply for replacement to ensure we catch where it was
                         reply = reply.replace(jsonStr, "").trim();
+
+                        // Cleanup residual markers common in LLM output
+                        reply = reply.replace(/:::JSON/gi, "").replace(/:::/g, "").replace(/```json/gi, "").replace(/```/g, "").trim();
+                    }
+                } catch (parseErr) {
+                    console.warn("Audit JSON Parse Failed:", parseErr);
+                    // Fallback: If it looked like JSON but failed, it might be a partial stream or really bad format.
+                    // We interpret this as a potential verdict failure.
+                    if (jsonStr.includes("verdict")) {
+                        verdict = {
+                            verdict: "NO HIRE",
+                            communication_score: 1,
+                            technical_accuracy: 1,
+                            summary: "System Audit Error: AI Output Malformed.",
+                            red_flags: ["Malformed JSON Output"]
+                        };
+                        reply = "";
                     }
                 }
-            } else {
-                // Fallback: Legacy IndexOf (for simple cases)
-                const start = reply.indexOf('{');
-                const end = reply.lastIndexOf('}');
-                if (start > -1 && end > start) {
-                    const potentialJson = reply.substring(start, end + 1);
-                    try {
-                        const jsonBlob = JSON.parse(potentialJson);
-                        if (jsonBlob.verdict) {
-                            verdict = jsonBlob;
-                            reply = "";
-                        } else if (jsonBlob.action) {
-                            action = jsonBlob.action;
-                            reply = reply.replace(potentialJson, "").trim();
-                        }
-                    } catch (e) { /* ignore */ }
-                }
             }
 
-            // Final Safety Net: If "verdict" or "action" keyword found in what remains, SILENCE IT anyway.
-            if (reply.toLowerCase().includes('"verdict":') || reply.includes("communication_score")) {
-                console.warn("Leaked verdict detected in reply. Forcing silence.");
-                reply = "";
-            }
-            if (reply.includes('"action":')) {
-                reply = reply.replace(/{[\s\S]*?"action":[\s\S]*?}/g, "").trim();
-            }
-
-            // Final Aggressive Cleanup of any leaking markers
-            if (reply.length > 0) {
-                reply = reply
-                    .replace(/:::JSON/gi, "")
-                    .replace(/:::/g, "")
-                    .replace(/json/gi, "") // Stray "json"
-                    .trim();
+            // Final Cleanup of leaked markers if any remained
+            if (reply.includes(":::JSON")) {
+                reply = reply.replace(/:::JSON[\s\S]*?:::/g, "").trim();
             }
 
         } catch (e) {

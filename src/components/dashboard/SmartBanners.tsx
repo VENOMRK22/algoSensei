@@ -58,12 +58,16 @@ export default function SmartBanners() {
 
         // 2. If No Valid Sticky, Fetch Fresh
         if (!finalDecision) {
+            if (!user) {
+                console.error("Navigator Error: User not authenticated");
+                return;
+            }
             setNavLoading(true);
             try {
                 const res = await fetch("/api/navigator/recommend", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ userId: user?.uid })
+                    body: JSON.stringify({ userId: user.uid })
                 });
                 const decision = await res.json();
 

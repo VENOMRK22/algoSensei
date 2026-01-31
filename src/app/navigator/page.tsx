@@ -64,7 +64,7 @@ export default function NavigatorPage() {
                 const res = await fetch("/api/navigator/recommend", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ uid: user.uid })
+                    body: JSON.stringify({ userId: user.uid })
                 });
 
                 const decision = await res.json();
