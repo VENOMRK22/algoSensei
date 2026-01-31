@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Editor } from "@monaco-editor/react";
-import { ArrowRightLeft, Sparkles, Copy, Check, MessageSquare } from "lucide-react";
+import { ArrowRightLeft, Sparkles, Copy, Check, MessageSquare, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { TechGridBackground } from "@/components/ui/tech-grid-background";
 
@@ -30,6 +31,7 @@ const SOURCE_LANGUAGES = [
 ];
 
 export default function TranslatorPage() {
+    const router = useRouter();
     const [sourceCode, setSourceCode] = useState("// Paste your code here...");
     const [sourceLang, setSourceLang] = useState("auto"); // Default Auto
 
@@ -87,13 +89,23 @@ export default function TranslatorPage() {
                 transition={{ duration: 0.5 }}
                 className="h-20 border-b border-white/5 bg-background/50 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-20"
             >
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 border border-primary/20 rounded-lg">
-                        <ArrowRightLeft className="text-primary" size={20} />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-bold tracking-tight uppercase">Code Translator</h1>
-                        <p className="text-xs text-muted-foreground tracking-widest uppercase">AI-Powered Syntax Conversion</p>
+                <div className="flex items-center gap-6">
+                    <button 
+                        onClick={() => router.push("/dashboard")}
+                        className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors group"
+                        title="Back to Dashboard"
+                    >
+                        <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                    </button>
+
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 border border-primary/20 rounded-lg">
+                            <ArrowRightLeft className="text-primary" size={20} />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-bold tracking-tight uppercase">Code Translator</h1>
+                            <p className="text-xs text-muted-foreground tracking-widest uppercase">AI-Powered Syntax Conversion</p>
+                        </div>
                     </div>
                 </div>
 

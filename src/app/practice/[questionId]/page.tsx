@@ -261,6 +261,7 @@ export default function PracticePage() {
                                 language={language}
                                 difficulty={question?.difficulty || "Easy"}
                                 questionTitle={question?.title || "Unknown Problem"}
+                                category={question?.category}
                                 testCases={question?.testCases}
                                 onSubmit={handleSubmit}
                                 onAiToggle={() => setActiveTab(prev => prev === 'ai' ? 'problem' : 'ai')}

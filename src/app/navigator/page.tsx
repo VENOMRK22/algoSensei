@@ -8,7 +8,7 @@ import { db } from "@/lib/firebase";
 import { TOPICS } from "@/lib/topics";
 import { ALL_QUESTIONS, getQuestionsByTopicId, TOPIC_ID_TO_CATEGORY } from "@/lib/allQuestions";
 import { Question } from "@/types/question";
-import { Zap, Trophy, BrainCircuit, Activity, ChevronRight, CheckCircle2, AlertCircle, TrendingUp, ChevronLeft, ChevronRight as ChevronNext } from "lucide-react";
+import { Zap, Trophy, BrainCircuit, Activity, ChevronRight, CheckCircle2, AlertCircle, TrendingUp, ChevronLeft, ChevronRight as ChevronNext, ArrowLeft } from "lucide-react";
 import { TechGridBackground } from "@/components/ui/tech-grid-background";
 import { motion } from "framer-motion";
 
@@ -181,6 +181,17 @@ export default function NavigatorPage() {
                 <TechGridBackground activeColor="text-cyan-500" blobColors={["bg-cyan-500/10", "bg-teal-500/10"]} />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,black_100%)] opacity-80" />
             </div>
+
+            {/* Back Button */}
+            <motion.button
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                onClick={() => router.push("/dashboard")}
+                className="absolute top-6 left-6 z-50 flex items-center gap-2 text-white/50 hover:text-white transition-colors group"
+            >
+                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                <span className="font-mono text-sm uppercase tracking-widest hidden md:inline">Back to Command</span>
+            </motion.button>
 
             <div className="relative z-10 max-w-7xl mx-auto p-6 md:p-12 space-y-12">
 

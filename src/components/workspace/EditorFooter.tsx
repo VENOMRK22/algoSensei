@@ -12,6 +12,7 @@ interface EditorFooterProps {
     language: string;
     difficulty: string;
     questionTitle: string;
+    category?: string; // Added category
     testCases?: TestCase[]; // Make optional or required based on usage
     onRun?: () => void;
     onSubmit: () => void;
@@ -22,7 +23,7 @@ interface EditorFooterProps {
     onSuccess?: () => void;
 }
 
-export default function EditorFooter({ code, language, difficulty, questionTitle, testCases, onSubmit, onAiToggle, isAiOpen, onRunComplete, onHint, onSuccess }: EditorFooterProps) {
+export default function EditorFooter({ code, language, difficulty, questionTitle, category = "General", testCases, onSubmit, onAiToggle, isAiOpen, onRunComplete, onHint, onSuccess }: EditorFooterProps) {
     const { user } = useAuth();
     const params = useParams();
     const currentQuestionId = params?.questionId as string;
@@ -215,7 +216,7 @@ export default function EditorFooter({ code, language, difficulty, questionTitle
             // Update Progress in Firebase
             if (user?.uid && currentQuestionId) {
                 try {
-                    await updateUserProgress(user.uid, currentQuestionId, difficulty, questionTitle);
+                    await updateUserProgress(user.uid, currentQuestionId, difficulty, questionTitle, category);
                 } catch (e) {
                     console.error("Failed to save progress", e);
                 }
